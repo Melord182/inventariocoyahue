@@ -3,10 +3,10 @@
 ## 📋 Descripción
 Sistema web de gestión de inventario de activos tecnológicos desarrollado para el Grupo Coyahue.
 
-## 👥 Equipo
+## 👥 Equipo (Roles de ejemplo)
 - **Lucas Gutiérrez**: Backend, Base de Datos, AWS
 - **María José Antilef**: Frontend, UX/UI
-- **Jaime López**: Backend, UX/UI
+- **Jaime López**: Backend, UX/UI    
 
 ## 🛠️ Tecnologías
 - **Frontend**: React.js, Bootstrap, Axios
