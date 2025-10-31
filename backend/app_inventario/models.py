@@ -85,7 +85,7 @@ class Productos(models.Model):
         return f"{self.categoria} - {self.nro_serie} ({self.modelo})"
 
 
-class Usuario(models.Model):
+class Usuarios(models.Model):
     """Usuarios del sistema (empleados que usan los productos)"""
     ROLES = [
         ('ADMIN', 'Administrador'),
@@ -125,7 +125,7 @@ class Usuario(models.Model):
 class Asignaciones(models.Model):
     """Asignación de productos a usuarios"""
     producto = models.ForeignKey(Productos, on_delete=models.CASCADE, related_name='asignaciones')
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='asignaciones')
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name='asignaciones')
     fecha_asignacion = models.DateField(auto_now_add=True)
     fecha_devolucion = models.DateField(blank=True, null=True)
 
@@ -181,7 +181,7 @@ class Documentaciones(models.Model):
         return f"{self.tipo_documento} - {self.nombre_archivo}"
 
 
-class Notificacion(models.Model):
+class Notificaciones(models.Model):
     """Notificaciones del sistema"""
     producto = models.ForeignKey(Productos, on_delete=models.CASCADE, related_name='notificaciones')
     mensaje = models.TextField()
@@ -199,7 +199,7 @@ class Notificacion(models.Model):
 
 class LogAcceso(models.Model):
     """Log de accesos al sistema"""
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='logs_acceso')
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name='logs_acceso')
     fecha_hora = models.DateTimeField(auto_now_add=True)
 
     class Meta:
