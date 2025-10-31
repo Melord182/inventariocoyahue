@@ -74,7 +74,6 @@ class Productos(models.Model):
     
     # Relaciones
     proveedor = models.ForeignKey(Proveedores, on_delete=models.PROTECT, related_name='productos')
-    sucursal = models.ForeignKey('Sucursal', on_delete=models.PROTECT, related_name='productos', blank=True, null=True)
     modelo = models.ForeignKey(Modelos, on_delete=models.PROTECT, related_name='productos')
     categoria = models.ForeignKey(Categorias, on_delete=models.PROTECT, related_name='productos')
 
