@@ -23,6 +23,21 @@ from .serializers import (
     DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer
 )
 
+def productos(request):
+    """Vista para servir la página de los productos"""
+    return render(request, 'listar_productos.html')
+
+
+
+
+
+
+
+
+
+
+
+
 """
 
 En las viewsets contaremos con tablas que contengan endpoints estándar (list, create, retrieve, update, delete)

@@ -1,6 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from . import views
 from .views import (
+    productos,
     ProveedoresViewSet,
     MarcasViewSet,
     CategoriasViewSet,
@@ -36,5 +38,6 @@ router.register(r'logs-acceso', LogAccesoViewSet, basename='logs-acceso')
 
 # URLs de la app
 urlpatterns = [
-    path('', include(router.urls)),
+    path('api/', include(router.urls)),
+    path('', views.productos, name='productos' ),
 ]
