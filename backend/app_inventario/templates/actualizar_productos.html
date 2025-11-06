@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productos - Inventario Coyahue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <img src="{% static 'img/Logo.png' %}" alt="Covaluce" width="220" height="80" class="me-2">
+                <a class="navbar-brand" href="{% url 'productos' %}"></a>
+            </div>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-fill"></i>
+                            Usuario
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'productos' %}">
+                            <i class="bi bi-list-ul me-2"></i>Listado de productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-tags me-2"></i>Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-truck me-2"></i>Proveedores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-graph-up me-2"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="content-header mb-4">
+                    <h1>Listado de productos 
+                        <span class="badge bg-secondary">{{ total_productos }}</span>
+                    </h1>
+                </div>
+
+                <!-- Mensajes de éxito/error -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Formulario de Edición -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">
+                            <i class="bi bi-pencil-square me-2"></i>Editar Información del Producto
+                        </h5>
+                        
+                        <!-- Información de identificación (solo lectura) -->
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong><i class="bi bi-info-circle me-2"></i>Información de Identificación</strong>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <small class="text-muted">ID: {{ producto.pk }}</small>
+                                </div>
+                            </div>
+                            <hr class="my-2">
+                            <small>
+                                <strong>N° Serie:</strong> {{ producto.nro_serie }} • 
+                                <strong>Categoría:</strong> {{ producto.categoria.nombre }} • 
+                                <strong>Modelo:</strong> {{ producto.modelo.nombre }} • 
+                                <strong>Marca:</strong> {{ producto.modelo.marca.nombre }}
+                            </small>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Los campos de identificación no se pueden modificar
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <form method="POST" action="{% url 'producto_edit' producto.pk %}">
+                            {% csrf_token %}
+                            
+                            <!-- NOTA: Los campos nro_serie, categoria, modelo y marca 
+                                 ahora son automáticamente hidden por el formulario -->
+                            
+                            <div class="row g-3">
+                                <!-- Campos EDITABLES solamente -->
+                                
+                                <!-- Fecha de Compra -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.fecha_compra.id_for_label }}" class="form-label">
+                                        Fecha de Compra <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.fecha_compra }}
+                                    {% if form.fecha_compra.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.fecha_compra.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Estado -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.estado.id_for_label }}" class="form-label">
+                                        Estado <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.estado }}
+                                    {% if form.estado.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.estado.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        <i class="bi bi-pencil-square me-1"></i>Estado actual del producto
+                                    </div>
+                                </div>
+                                
+                                <!-- Proveedor -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.proveedor.id_for_label }}" class="form-label">
+                                        Proveedor <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.proveedor }}
+                                    {% if form.proveedor.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.proveedor.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        <i class="bi bi-pencil-square me-1"></i>Proveedor del producto
+                                    </div>
+                                </div>
+                                
+                                <!-- Documento Factura -->
+                                <div class="col-md-6">
+                                    <label for="{{ form.documento_factura.id_for_label }}" class="form-label">
+                                        Documento Factura
+                                    </label>
+                                    {{ form.documento_factura }}
+                                    {% if form.documento_factura.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.documento_factura.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        <i class="bi bi-pencil-square me-1"></i>Número de factura (opcional)
+                                    </div>
+                                </div>
+                                
+                                <!-- Botones de acción -->
+                                <div class="col-12 mt-4">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a href="{% url 'productos' %}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                                        </a>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-check-circle me-2"></i>Actualizar Producto
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script mínimo - solo para estilos -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar clases de Bootstrap automáticamente
+            const formElements = document.querySelectorAll('input, select, textarea');
+            formElements.forEach(element => {
+                if (element.type !== 'checkbox' && element.type !== 'radio' && element.tagName !== 'SELECT') {
+                    element.classList.add('form-control');
+                }
+                if (element.tagName === 'SELECT') {
+                    element.classList.add('form-select');
+                }
+            });
+            
+            // Configurar fecha
+            const fechaCompraField = document.querySelector('#id_fecha_compra');
+            if (fechaCompraField) {
+                fechaCompraField.type = 'date';
+            }
+        });
+    </script>
+</body>
+</html>
