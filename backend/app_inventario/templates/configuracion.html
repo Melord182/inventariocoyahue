@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Inventario Coyahue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <img src="{% static 'img/Logo.png' %}" alt="Covaluce" width="220" height="80" class="me-2">
+                <a class="navbar-brand" href=""></a>
+            </div>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Icono de Notificaciones -->
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{% url 'notificaciones' %}">
+                            <i class="bi bi-bell fs-5"></i>
+                            {% if notificaciones_no_leidas > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ notificaciones_no_leidas }}
+                                <span class="visually-hidden">notificaciones no leídas</span>
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <!-- Dropdown de Usuario -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-fill"></i>
+                            Usuario
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'configuracion' %}"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dashboard' %}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'productos' %}">
+                            <i class="bi bi-list-ul me-2"></i>Listado de productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'categorias' %}">
+                            <i class="bi bi-tags me-2"></i>Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'proveedores' %}">
+                            <i class="bi bi-truck me-2"></i>Proveedores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'reportes' %}">
+                            <i class="bi bi-graph-up me-2"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="content-header mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h1>Configuración del Sistema</h1>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver al Dashboard
+                        </a>
+                    </div>
+                    <p class="text-muted">Configura los parámetros y preferencias del sistema de inventario</p>
+                </div>
+
+                <!-- Mensajes de éxito/error -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Navegación entre secciones -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <nav>
+                                    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                                        <button class="nav-link active" id="nav-perfil-tab" data-bs-toggle="tab" data-bs-target="#nav-perfil" type="button" role="tab">
+                                            <i class="bi bi-person me-2"></i>Perfil de Usuario
+                                        </button>
+                                        <button class="nav-link" id="nav-sistema-tab" data-bs-toggle="tab" data-bs-target="#nav-sistema" type="button" role="tab">
+                                            <i class="bi bi-gear me-2"></i>Configuración del Sistema
+                                        </button>
+                                        <button class="nav-link" id="nav-notificaciones-tab" data-bs-toggle="tab" data-bs-target="#nav-notificaciones" type="button" role="tab">
+                                            <i class="bi bi-bell me-2"></i>Notificaciones
+                                        </button>
+                                        <button class="nav-link" id="nav-seguridad-tab" data-bs-toggle="tab" data-bs-target="#nav-seguridad" type="button" role="tab">
+                                            <i class="bi bi-shield-lock me-2"></i>Seguridad
+                                        </button>
+                                    </div>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido de las pestañas -->
+                <div class="tab-content" id="nav-tabContent">
+                    <!-- Pestaña: Perfil de Usuario -->
+                    <div class="tab-pane fade show active" id="nav-perfil" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-person-circle me-2"></i>Información Personal
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Nombre</label>
+                                                    <input type="text" class="form-control" value="Administrador" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Apellido</label>
+                                                    <input type="text" class="form-control" value="Sistema" readonly>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">Correo Electrónico</label>
+                                                    <input type="email" class="form-control" value="admin@coyahue.cl" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Rol</label>
+                                                    <input type="text" class="form-control" value="Administrador" readonly>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Último Acceso</label>
+                                                    <input type="text" class="form-control" value="{% now 'd/m/Y H:i' %}" readonly>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-key me-2"></i>Cambiar Contraseña
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label">Contraseña Actual</label>
+                                                <input type="password" class="form-control" placeholder="Ingrese su contraseña actual">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Nueva Contraseña</label>
+                                                <input type="password" class="form-control" placeholder="Ingrese nueva contraseña">
+                                                <div class="form-text">Mínimo 8 caracteres, incluir mayúsculas, minúsculas y números.</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Confirmar Contraseña</label>
+                                                <input type="password" class="form-control" placeholder="Confirme la nueva contraseña">
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-key me-2"></i>Cambiar Contraseña
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pestaña: Configuración del Sistema -->
+                    <div class="tab-pane fade" id="nav-sistema" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-building me-2"></i>Configuración General
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label">Nombre de la Empresa</label>
+                                                <input type="text" class="form-control" value="Coyahue Inventarios" readonly>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">RUT Empresa</label>
+                                                <input type="text" class="form-control" value="76.123.456-7" readonly>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Moneda</label>
+                                                <select class="form-select">
+                                                    <option selected>Peso Chileno (CLP)</option>
+                                                    <option>Dólar Americano (USD)</option>
+                                                    <option>Euro (EUR)</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Formato de Fecha</label>
+                                                <select class="form-select">
+                                                    <option selected>DD/MM/AAAA</option>
+                                                    <option>MM/DD/AAAA</option>
+                                                    <option>AAAA-MM-DD</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Zona Horaria</label>
+                                                <select class="form-select">
+                                                    <option selected>America/Santiago</option>
+                                                    <option>UTC</option>
+                                                    <option>America/New_York</option>
+                                                </select>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-check-circle me-2"></i>Guardar Configuración
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-box-seam me-2"></i>Configuración de Inventario
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label">Código de Producto Automático</label>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Generar código automáticamente</label>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Prefijo Código Producto</label>
+                                                <input type="text" class="form-control" value="PROD" placeholder="Ej: PROD">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Notificar Stock Bajo</label>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Activar notificaciones de stock bajo</label>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Umbral Stock Bajo</label>
+                                                <input type="number" class="form-control" value="5" min="1">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Días para Mantención Preventiva</label>
+                                                <input type="number" class="form-control" value="30" min="1">
+                                                <div class="form-text">Notificar con X días de anticipación</div>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-check-circle me-2"></i>Guardar Configuración
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pestaña: Notificaciones -->
+                    <div class="tab-pane fade" id="nav-notificaciones" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-bell me-2"></i>Preferencias de Notificaciones
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Tipos de Notificaciones</label>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Nuevos productos agregados</label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Productos con stock bajo</label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Mantenimientos programados</label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox">
+                                                    <label class="form-check-label">Asignaciones de productos</label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Alertas de garantía</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Métodos de Notificación</label>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Notificaciones en el sistema</label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox">
+                                                    <label class="form-check-label">Notificaciones por correo electrónico</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Frecuencia de Resumen</label>
+                                                <select class="form-select">
+                                                    <option selected>Diario</option>
+                                                    <option>Semanal</option>
+                                                    <option>Mensual</option>
+                                                    <option>Nunca</option>
+                                                </select>
+                                                <div class="form-text">Recibir resumen de actividades</div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-check-circle me-2"></i>Guardar Preferencias
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-envelope me-2"></i>Configuración de Correo
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label">Correo para Notificaciones</label>
+                                                <input type="email" class="form-control" value="admin@coyahue.cl">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Servidor SMTP</label>
+                                                <input type="text" class="form-control" value="smtp.coyahue.cl">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Puerto SMTP</label>
+                                                <input type="number" class="form-control" value="587">
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox">
+                                                    <label class="form-check-label">Usar SSL/TLS</label>
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="bi bi-envelope-check me-2"></i>Probar Configuración
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pestaña: Seguridad -->
+                    <div class="tab-pane fade" id="nav-seguridad" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-shield-check me-2"></i>Configuración de Seguridad
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form>
+                                            <div class="mb-3">
+                                                <label class="form-label">Tiempo de Expiración de Sesión</label>
+                                                <select class="form-select">
+                                                    <option>15 minutos</option>
+                                                    <option>30 minutos</option>
+                                                    <option selected>1 hora</option>
+                                                    <option>4 horas</option>
+                                                    <option>8 horas</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Máximo de Intentos de Login</label>
+                                                <input type="number" class="form-control" value="3" min="1" max="10">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Tiempo de Bloqueo por Intentos Fallidos</label>
+                                                <select class="form-select">
+                                                    <option>5 minutos</option>
+                                                    <option selected>15 minutos</option>
+                                                    <option>30 minutos</option>
+                                                    <option>1 hora</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" checked>
+                                                    <label class="form-check-label">Requerir contraseña segura</label>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox">
+                                                    <label class="form-check-label">Autenticación de dos factores (2FA)</label>
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-shield-lock me-2"></i>Guardar Configuración
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-clock-history me-2"></i>Registro de Actividad
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Mantener registros por</label>
+                                            <select class="form-select">
+                                                <option>30 días</option>
+                                                <option selected>90 días</option>
+                                                <option>1 año</option>
+                                                <option>Indefinidamente</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" checked>
+                                                <label class="form-check-label">Registrar inicio de sesión</label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" checked>
+                                                <label class="form-check-label">Registrar cambios en productos</label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox">
+                                                <label class="form-check-label">Registrar consultas de reportes</label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="alert alert-info">
+                                            <h6 class="alert-heading">
+                                                <i class="bi bi-info-circle me-2"></i>Información de Registros
+                                            </h6>
+                                            <p class="mb-0">Actualmente hay <strong>1,247</strong> registros de actividad en el sistema.</p>
+                                        </div>
+                                        
+                                        <button type="button" class="btn btn-outline-secondary w-100">
+                                            <i class="bi bi-download me-2"></i>Exportar Registros
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

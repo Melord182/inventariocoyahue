@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorías - Inventario Coyahue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <img src="{% static 'img/Logo.png' %}" alt="Coyahue" width="220" height="80" class="me-2">
+                <a class="navbar-brand" href="{% url 'productos' %}"></a>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-fill"></i> Usuario
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor principal -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'productos' %}">
+                            <i class="bi bi-list-ul me-2"></i>Listado de productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'categorias' %}">
+                            <i class="bi bi-tags me-2"></i>Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-truck me-2"></i>Proveedores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-graph-up me-2"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="content-header mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h1 class="text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Eliminar Categoría
+                        </h1>
+                        <a href="{% url 'categorias' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mensajes -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Tarjeta de Confirmación -->
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-trash me-2"></i>Confirmar Eliminación
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Alerta de advertencia -->
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-octagon me-2"></i>¡Atención! Esta acción no se puede deshacer
+                            </h6>
+                            <p class="mb-0">Estás a punto de eliminar permanentemente una categoría del sistema.</p>
+                        </div>
+
+                        <!-- Información de la categoría a eliminar -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Información de la Categoría</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <th class="bg-light">Nombre:</th>
+                                                <td>{{ categoria.nombre }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Descripción:</th>
+                                                <td>{{ categoria.descripcion|default:"Sin descripción" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">ID:</th>
+                                                <td>{{ categoria.pk }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Impacto en el Sistema</h6>
+                                
+                                <!-- Verificación de productos asociados -->
+                                {% if categoria.productos.count > 0 %}
+                                <div class="alert alert-danger">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-x-circle me-2"></i>No se puede eliminar
+                                    </h6>
+                                    <p class="mb-2">Esta categoría tiene <strong>{{ categoria.productos.count }} productos</strong> asociados.</p>
+                                    <small>
+                                        Para eliminar esta categoría, primero debes:<br>
+                                        1. Reasignar los productos a otra categoría<br>
+                                        2. O eliminar todos los productos asociados
+                                    </small>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-check-circle me-2"></i>Eliminación permitida
+                                    </h6>
+                                    <p class="mb-0">Esta categoría no tiene productos asociados.</p>
+                                </div>
+                                {% endif %}
+
+                                <div class="alert alert-light border">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="check1" {% if categoria.productos.count > 0 %}disabled{% endif %}>
+                                        <label class="form-check-label" for="check1">
+                                            He verificado que no hay productos asociados
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="check2" {% if categoria.productos.count > 0 %}disabled{% endif %}>
+                                        <label class="form-check-label" for="check2">
+                                            Entiendo que esta acción es permanente
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formulario de Eliminación -->
+                        {% if categoria.productos.count == 0 %}
+                        <form method="POST" action="{% url 'categoria_delete' categoria.pk %}" id="deleteForm">
+                            {% csrf_token %}
+                            
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="alert alert-danger">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                            <label class="form-check-label fw-bold" for="confirmDelete">
+                                                SÍ, comprendo las consecuencias y deseo eliminar permanentemente 
+                                                la categoría <strong>"{{ categoria.nombre }}"</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a href="{% url 'categorias' %}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                                        </a>
+                                        <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                            <i class="bi bi-trash me-2"></i>Eliminar Permanentemente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        {% else %}
+                        <div class="alert alert-info mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Acción requerida:</strong> No puedes eliminar esta categoría porque tiene productos asociados.
+                                </div>
+                                <a href="{% url 'categorias' %}" class="btn btn-primary">
+                                    <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script para validación de eliminación -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if categoria.productos.count == 0 %}
+            const confirmCheckbox = document.getElementById('confirmDelete');
+            const deleteButton = document.getElementById('deleteButton');
+            const deleteForm = document.getElementById('deleteForm');
+            
+            // Habilitar/deshabilitar botón según checkbox
+            confirmCheckbox.addEventListener('change', function() {
+                deleteButton.disabled = !this.checked;
+            });
+            
+            // Confirmación adicional antes de enviar
+            deleteForm.addEventListener('submit', function(e) {
+                if (!confirmCheckbox.checked) {
+                    e.preventDefault();
+                    alert('Debes confirmar la eliminación marcando la casilla.');
+                    return;
+                }
+                
+                // Confirmación final
+                const confirmed = confirm(
+                    '¿ESTÁS ABSOLUTAMENTE SEGURO?\n\n' +
+                    'Esta acción ELIMINARÁ PERMANENTEMENTE la categoría:\n' +
+                    '• Nombre: {{ categoria.nombre }}\n' +
+                    '• ID: {{ categoria.pk }}\n\n' +
+                    'Esta acción NO se puede deshacer.'
+                );
+                
+                if (!confirmed) {
+                    e.preventDefault();
+                }
+            });
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

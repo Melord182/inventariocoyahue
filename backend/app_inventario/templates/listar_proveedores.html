@@ -65,7 +65,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="{% url 'productos' %}">
+                        <a class="nav-link" href="{% url 'productos' %}">
                             <i class="bi bi-list-ul me-2"></i>Listado de productos
                         </a>
                     </li>
@@ -75,7 +75,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'proveedores' %}">
+                        <a class="nav-link active" href="{% url 'proveedores' %}">
                             <i class="bi bi-truck me-2"></i>Proveedores
                         </a>
                     </li>
@@ -90,8 +90,8 @@
             <!-- Main Content -->
             <div class="col-md-10 p-4">
                 <div class="content-header mb-4">
-                    <h1>Listado de productos 
-                        <span class="badge bg-secondary">{{ total_productos }}</span>
+                    <h1>Listado de Proveedores 
+                        
                     </h1>
                 </div>
 
@@ -110,40 +110,18 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title"><i class="bi bi-funnel me-2"></i>Filtros</h5>
-                            <form method="GET" action="{% url 'productos' %}">
+                            <form method="GET" action="{% url 'proveedores' %}">
                                 <div class="row g-3">
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         {{ filter_form.search.label_tag }}
                                         {{ filter_form.search }}
                                     </div>
                                     
-                                    <div class="col-md-2">
-                                        {{ filter_form.categoria.label_tag }}
-                                        {{ filter_form.categoria }}
-                                    </div>
-                                    
-                                    <div class="col-md-2">
-                                        {{ filter_form.estado.label_tag }}
-                                        {{ filter_form.estado }}
-                                    </div>
-                                    
-                                    <div class="checkbox-button-wrapper">
-                        <label class="checkbox-button" for="id_solo_disponibles">
-                            <input type="checkbox" id="id_solo_disponibles">
-                            <span class="custom-checkbox"></span>
-                            <span class="checkbox-label">
-                                <span class="icon"></span>
-                                Solo productos disponibles
-                            </span>
-                            <span class="status-indicator">Inactivo</span>
-                        </label>
-                    </div>
-
-                                    <div class="col-md-4 d-flex align-items-end gap-2">
+                                    <div class="col-md-6 d-flex align-items-end gap-2">
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-search me-2"></i>Buscar
                                         </button>
-                                        <a href="{% url 'productos' %}" class="btn btn-outline-secondary">
+                                        <a href="{% url 'proveedores' %}" class="btn btn-outline-secondary">
                                             <i class="bi bi-x-circle me-2"></i>Limpiar
                                         </a>
                                     </div>
@@ -153,7 +131,7 @@
                     </div>
                 </div>
                 
-                <!-- Tabla de productos -->
+                <!-- Tabla de proveedores -->
                 <div class="table-container mt-3">
                     <div class="card">
                         <div class="card-body">
@@ -161,54 +139,41 @@
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>N° Serie</th>
-                                            <th>Categoría</th>
-                                            <th>Modelo</th>
-                                            <th>Marca</th>
-                                            <th>Estado</th>
-                                            <th>Proveedor</th>
-                                            <th>Fecha de Compra</th>
+                                            <th>Nombre</th>
+                                            <th>RUT</th>
+                                            <th>Contacto</th>
+                                            <th>Teléfono</th>
+                                            <th>Correo</th>
+                                            <th>Productos</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% if productos %}
-                                            {% for producto in productos %}
+                                        {% if proveedores %}
+                                            {% for proveedor in proveedores %}
                                             <tr>
-                                                <td><strong>{{ producto.nro_serie }}</strong></td>
-                                                <td>{{ producto.categoria.nombre }}</td>
-                                                <td>{{ producto.modelo.nombre }}</td>
-                                                <td>{{ producto.modelo.marca.nombre }}</td>
+                                                <td><strong>{{ proveedor.nombre }}</strong></td>
+                                                <td>{{ proveedor.rut|default:"-" }}</td>
+                                                <td>{{ proveedor.contacto|default:"-" }}</td>
+                                                <td>{{ proveedor.telefono|default:"-" }}</td>
                                                 <td>
-                                                    <span class="badge 
-                                                        {% if producto.estado.nombre == 'Operativo' or producto.estado.nombre == 'Activo' %}
-                                                            bg-success
-                                                        {% elif producto.estado.nombre == 'En Mantención' %}
-                                                            bg-warning text-dark
-                                                        {% elif producto.estado.nombre == 'Dado de Baja' %}
-                                                            bg-danger
-                                                        {% else %}
-                                                            bg-secondary
-                                                        {% endif %}
-                                                    ">
-                                                        {{ producto.estado.nombre }}
-                                                    </span>
+                                                    {% if proveedor.correo %}
+                                                    <a href="mailto:{{ proveedor.correo }}">{{ proveedor.correo }}</a>
+                                                    {% else %}
+                                                    -
+                                                    {% endif %}
                                                 </td>
-                                                <td>{{ producto.proveedor.nombre }}</td>
-                                                <td>{{ producto.fecha_compra|date:"d/m/Y" }}</td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ proveedor.productos.count }}</span>
+                                                </td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm" role="group">
-                                                        <a href="{% url 'producto_detail' producto.pk %}" 
-                                                           class="btn btn-outline-info" 
-                                                           title="Ver detalle">
-                                                            <i class="bi bi-eye"></i>
-                                                        </a>
-                                                        <a href="{% url 'producto_edit' producto.pk %}" 
+                                                        <a href="{% url 'proveedor_edit' proveedor.pk %}" 
                                                            class="btn btn-outline-primary" 
                                                            title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </a>
-                                                        <a href="{% url 'producto_delete' producto.pk %}" 
+                                                        <a href="{% url 'proveedor_delete' proveedor.pk %}" 
                                                            class="btn btn-outline-danger" 
                                                            title="Eliminar">
                                                             <i class="bi bi-trash"></i>
@@ -219,9 +184,9 @@
                                             {% endfor %}
                                         {% else %}
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted py-4">
+                                                <td colspan="7" class="text-center text-muted py-4">
                                                     <i class="bi bi-inbox me-2 fs-3"></i>
-                                                    <p>No se encontraron productos</p>
+                                                    <p>No se encontraron proveedores</p>
                                                 </td>
                                             </tr>
                                         {% endif %}
@@ -229,11 +194,11 @@
                                 </table>
                             </div>
                             
-                            <!-- Botón agregar Producto -->
+                            <!-- Botón agregar Proveedor -->
                             <div class="row mt-3">
                                 <div class="col-md-4">
-                                    <a href="{% url 'producto_create' %}" class="btn btn-primary w-100">
-                                        <i class="bi bi-plus-circle me-2"></i>Agregar Producto
+                                    <a href="{% url 'proveedor_create' %}" class="btn btn-primary w-100">
+                                        <i class="bi bi-plus-circle me-2"></i>Agregar Proveedor
                                     </a>
                                 </div>
                             </div>

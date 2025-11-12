@@ -474,6 +474,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 from .models import Productos, Categorias, Estados, Marcas, Modelos
 from .forms import (
     ProductoForm, ProductoFilterForm,
@@ -485,7 +486,7 @@ from .forms import (
     
     )
 
-
+ 
 # ============= VISTAS DE PROVEEDORES =============
 
 def proveedores_list(request):
@@ -538,7 +539,7 @@ def proveedores_create(request):
         'action': 'Crear',
     }
     
-    return render(request, 'agregar_proveedor.html', context)
+    return render(request, 'agregar_proveedores.html', context)
 
 
 def proveedores_edit(request, pk):
@@ -565,7 +566,7 @@ def proveedores_edit(request, pk):
         'action': 'Actualizar',
     }
     
-    return render(request, 'actualizar_proveedor.html', context)
+    return render(request, 'actualizar_proveedores.html', context)
 
 
 def proveedores_delete(request, pk):
@@ -583,7 +584,7 @@ def proveedores_delete(request, pk):
         'proveedor': proveedor,
     }
     
-    return render(request, 'eliminar_proveedor.html', context)
+    return render(request, 'eliminar_proveedores.html', context)
 
 
 # ============= VISTAS DE CATEGORÍAS =============
@@ -637,7 +638,7 @@ def categorias_create(request):
         'action': 'Crear',
     }
     
-    return render(request, 'agregar_categoria.html', context)
+    return render(request, 'agregar_categorias.html', context)
 
 
 def categorias_edit(request, pk):
@@ -664,7 +665,7 @@ def categorias_edit(request, pk):
         'action': 'Actualizar',
     }
     
-    return render(request, 'actualizar_categoria.html', context)
+    return render(request, 'actualizar_categorias.html', context)
 
 
 def categorias_delete(request, pk):
@@ -682,7 +683,7 @@ def categorias_delete(request, pk):
         'categoria': categoria,
     }
     
-    return render(request, 'eliminar_categoria.html', context)
+    return render(request, 'eliminar_categorias.html', context)
 
 
 # ============= VISTAS DE MARCAS =============
@@ -983,6 +984,65 @@ def estados_delete(request, pk):
     return render(request, 'eliminar_estado.html', context)
 
 
+# ============= NOTIFICACIONES =============
+
+def notificaciones(request):
+    """Página de notificaciones del usuario"""
+    
+    # Obtener todas las notificaciones del usuario actual (o todas si no hay autenticación)
+    notificaciones_list = Notificaciones.objects.all().order_by('-fecha', '-hora')
+    
+    # Paginación (10 notificaciones por página)
+    paginator = Paginator(notificaciones_list, 10)
+    page_number = request.GET.get('page')
+    notificaciones_page = paginator.get_page(page_number)
+    
+    # Estadísticas
+    total_notificaciones = notificaciones_list.count()
+    notificaciones_no_leidas = notificaciones_list.filter(leido=False).count()
+    notificaciones_leidas = total_notificaciones - notificaciones_no_leidas
+    
+    context = {
+        'notificaciones': notificaciones_page,
+        'total_notificaciones': total_notificaciones,
+        'notificaciones_no_leidas': notificaciones_no_leidas,
+        'notificaciones_leidas': notificaciones_leidas,
+    }
+    
+    return render(request, 'notificaciones.html', context)
+
+def marcar_leida(request, pk):
+    """Marcar una notificación como leída"""
+    notificacion = get_object_or_404(Notificaciones, pk=pk)
+    notificacion.leido = True
+    notificacion.save()
+    
+    messages.success(request, 'Notificación marcada como leída.')
+    return redirect('notificaciones')
+
+def marcar_todas_leidas(request):
+    """Marcar todas las notificaciones como leídas"""
+    if request.method == 'POST':
+        Notificaciones.objects.filter(leido=False).update(leido=True)
+        messages.success(request, 'Todas las notificaciones han sido marcadas como leídas.')
+    
+    return redirect('notificaciones')
+
+
+# ============= CONFIGURACIÓN =============
+
+def configuracion(request):
+    """Página de configuración del sistema"""
+    
+    # Obtener contador de notificaciones no leídas para el navbar
+    notificaciones_no_leidas = Notificaciones.objects.filter(leido=False).count()
+    
+    context = {
+        'title': 'Configuración del Sistema',
+        'notificaciones_no_leidas': notificaciones_no_leidas,
+    }
+    
+    return render(request, 'configuracion.html', context)
 
 
 # ============= VISTA PRINCIPAL DE PRODUCTOS =============
@@ -1207,14 +1267,15 @@ def productos_disponibles(request):
     return render(request, 'listar_productos.html', context)
 
 
-# ============= VISTA ÍNDICE =============
+# ============= DASHBOARD =============
 
-def index(request):
-    """Página principal / Dashboard"""
+def dashboard(request):
+    """Dashboard principal del sistema"""
     
+    from django.db.models import Count
     from .models import Asignaciones
     
-    # Estadísticas
+    # Estadísticas básicas
     total_productos = Productos.objects.count()
     productos_operativos = Productos.objects.filter(estado__nombre='Operativo').count()
     productos_mantencion = Productos.objects.filter(estado__nombre='En Mantención').count()
@@ -1223,11 +1284,69 @@ def index(request):
         fecha_devolucion__isnull=True
     ).count()
     
+    total_proveedores = Proveedores.objects.count()
+    total_categorias = Categorias.objects.count()
+    total_marcas = Marcas.objects.count()
+    total_modelos = Modelos.objects.count()
+    
+    # Productos por categoría
+    productos_por_categoria = Categorias.objects.annotate(
+        total=Count('productos')
+    ).filter(total__gt=0).order_by('-total')[:5]
+    
+    # Calcular porcentajes para categorías
+    for categoria in productos_por_categoria:
+        if total_productos > 0:
+            categoria.porcentaje = (categoria.total / total_productos) * 100
+        else:
+            categoria.porcentaje = 0
+    
+    # Productos por estado
+    productos_por_estado = Estados.objects.annotate(
+        total=Count('productos')
+    ).filter(total__gt=0).order_by('-total')
+    
+    # Calcular porcentajes para estados
+    for estado in productos_por_estado:
+        if total_productos > 0:
+            estado.porcentaje = (estado.total / total_productos) * 100
+        else:
+            estado.porcentaje = 0
+    
+    # Últimos productos agregados
+    ultimos_productos = Productos.objects.select_related(
+        'categoria', 'modelo', 'estado'
+    ).order_by('-fecha_compra')[:5]
+    
     context = {
+        # Estadísticas principales
         'total_productos': total_productos,
         'productos_operativos': productos_operativos,
         'productos_mantencion': productos_mantencion,
         'productos_asignados': productos_asignados,
+        
+        # Totales por entidad
+        'total_proveedores': total_proveedores,
+        'total_categorias': total_categorias,
+        'total_marcas': total_marcas,
+        'total_modelos': total_modelos,
+        
+        # Datos para gráficos/tablas
+        'productos_por_categoria': productos_por_categoria,
+        'productos_por_estado': productos_por_estado,
+        'ultimos_productos': ultimos_productos,
     }
     
-    return render(request, 'index.html', context)
+    return render(request, 'dashboard.html', context)
+
+
+# ============= REPORTES =============
+
+def reportes(request):
+    """Página de reportes (placeholder para futura implementación)"""
+    
+    context = {
+        'title': 'Generador de Reportes',
+    }
+    
+    return render(request, 'reportes.html', context)
