@@ -62,6 +62,19 @@ class Estados(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+
+class Sucursales(models.Model):
+    """Sucursales a las que pertenecen los productos"""
+    nombre = models.CharField(max_length=200, unique=True)
+    direccion = models.CharField(max_length=300, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "Sucursales"
+
+    def __str__(self):
+        return self.nombre
 
 
 class Productos(models.Model):
@@ -72,13 +85,45 @@ class Productos(models.Model):
     estado = models.ForeignKey(Estados, on_delete=models.PROTECT, related_name='productos')
     documento_factura = models.CharField(max_length=200, blank=True, null=True)
     
+    # Campos de garantía
+    garantia_meses = models.PositiveIntegerField(default=12)  
+    fecha_venc_garantia = models.DateField(blank=True, null=True)
+
+    ESTADOS_GARANTIA = [
+        ('VIGENTE', 'Vigente'),
+        ('VENCIDA', 'Vencida'),
+        ('NO_APLICA', 'No aplica')
+    ]
+    estado_garantia = models.CharField(max_length=20, choices=ESTADOS_GARANTIA, default='VIGENTE')
+
+
     # Relaciones
     proveedor = models.ForeignKey(Proveedores, on_delete=models.PROTECT, related_name='productos')
     modelo = models.ForeignKey(Modelos, on_delete=models.PROTECT, related_name='productos')
     categoria = models.ForeignKey(Categorias, on_delete=models.PROTECT, related_name='productos')
+    sucursal = models.ForeignKey(Sucursales, on_delete=models.PROTECT, null=True, blank=True, related_name='productos')
 
     class Meta:
         verbose_name_plural = "Productos"
+
+    def save(self, *args, **kwargs):
+        """Calcular fecha de vencimiento de garantía automáticamente."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        if self.fecha_compra and self.garantia_meses:
+            # Calcular vencimiento
+            self.fecha_venc_garantia = self.fecha_compra + timedelta(days=self.garantia_meses * 30)
+
+            # Actualizar estado
+            hoy = timezone.now().date()
+            if hoy > self.fecha_venc_garantia:
+                self.estado_garantia = 'VENCIDA'
+            else:
+                self.estado_garantia = 'VIGENTE'
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.categoria} - {self.nro_serie} ({self.modelo})"
@@ -207,3 +252,13 @@ class LogAcceso(models.Model):
 
     def __str__(self):
         return f"{self.usuario.usuario_login} - {self.fecha_hora.strftime('%d/%m/%Y %H:%M:%S')}"
+    
+
+class CodigoQR(models.Model):
+    """Código QR asociado a un producto"""
+    producto = models.OneToOneField(Productos, on_delete=models.CASCADE, related_name='qr')
+    imagen_qr = models.ImageField(upload_to="qrs/", null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"QR de {self.producto.nro_serie}"

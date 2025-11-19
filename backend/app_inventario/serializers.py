@@ -1,13 +1,10 @@
 from rest_framework import serializers
-from .models import Proveedores, Marcas, Categorias, Modelos, Estados, Productos, Usuarios, Asignaciones, Mantenciones, HistorialEstados, Documentaciones, Notificaciones, LogAcceso
-
-
-from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Proveedores, Marcas, Categorias, Modelos, Estados, Productos,
-    Usuarios, Asignaciones, Mantenciones, HistorialEstados,
-    Documentaciones, Notificaciones, LogAcceso
+    Proveedores, Marcas, Categorias, Modelos, Estados, 
+    Productos, Usuarios, Asignaciones, Mantenciones, 
+    HistorialEstados, Documentaciones, Notificaciones, LogAcceso,
+    Sucursales, CodigoQR
 )
 
 
@@ -57,6 +54,15 @@ class EstadosSerializer(serializers.ModelSerializer):
         model = Estados
         fields = '__all__'
 
+class SucursalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sucursales
+        fields = '__all__'
+
+class CodigoQRSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CodigoQR
+        fields = '__all__'
 
 # ============= SERIALIZERS DE USUARIOS =============
 
@@ -140,6 +146,8 @@ class ProductosDetailSerializer(serializers.ModelSerializer):
     modelo = ModelosSerializer(read_only=True)
     categoria = CategoriasSerializer(read_only=True)
     estado = EstadosSerializer(read_only=True)
+    sucursal = SucursalSerializer(read_only=True)
+    codigo_qr = CodigoQRSerializer(read_only=True)
     
     # Relaciones inversas
     asignaciones = serializers.SerializerMethodField()

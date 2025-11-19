@@ -35,9 +35,8 @@ from .views import (
     DocumentacionesViewSet,
     NotificacionesViewSet,
     LogAccesoViewSet,
-
-    productos_list,
-    productos_create
+    SucursalViewSet,
+    CodigoQRViewSet,
 )
 
 # Crear el router
@@ -57,6 +56,8 @@ router.register(r'historial-estados', HistorialEstadosViewSet, basename='histori
 router.register(r'documentaciones', DocumentacionesViewSet, basename='documentaciones')
 router.register(r'notificaciones', NotificacionesViewSet, basename='notificaciones')
 router.register(r'logs-acceso', LogAccesoViewSet, basename='logs-acceso')
+router.register(r'sucursales', SucursalViewSet)
+router.register(r'codigos-qr', CodigoQRViewSet)
 
 # URLs de la app
 urlpatterns = [

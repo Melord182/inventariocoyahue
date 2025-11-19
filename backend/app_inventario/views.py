@@ -14,7 +14,8 @@ from .models import (
 )
 from .serializers import (
     ProveedoresSerializer, MarcasSerializer, CategoriasSerializer,
-    ModelosSerializer, EstadosSerializer,
+    ModelosSerializer, EstadosSerializer, SucursalSerializer, CodigoQRSerializer,
+    
     ProductosListSerializer, ProductosDetailSerializer, ProductosCreateUpdateSerializer,
     UsuariosSerializer, UsuariosCreateSerializer,
     AsignacionesSerializer, AsignacionesCreateSerializer,
@@ -22,19 +23,6 @@ from .serializers import (
     HistorialEstadosSerializer, HistorialEstadosCreateSerializer,
     DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer
 )
-
-def productos(request):
-    """Vista para listar productos con datos de la BD"""
-    # Obtener todos los productos con sus relaciones
-    productos_list = Productos.objects.select_related(
-        'categoria', 'modelo', 'modelo__marca', 'estado', 'proveedor'
-    ).all()
-    
-    context = {
-        'productos': productos_list
-    }
-    
-    return render(request, 'listar_producto.html', context)
 
 """
 
@@ -102,6 +90,14 @@ class EstadosViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre', 'descripcion']
     ordering = ['nombre']
 
+
+class SucursalViewSet(viewsets.ModelViewSet):
+    queryset = Sucursal.objects.all()
+    serializer_class = SucursalSerializer
+
+class CodigoQRViewSet(viewsets.ModelViewSet):
+    queryset = CodigoQR.objects.all()
+    serializer_class = CodigoQRSerializer
 
 
 # ============= VIEWSET DE PRODUCTOS =============
