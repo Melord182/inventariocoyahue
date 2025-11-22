@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Producto - Inventario Coyahue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <img src="{% static 'img/Logo.png' %}" alt="Covaluce" width="220" height="80" class="me-2">
+                <a class="navbar-brand" href="{% url 'productos' %}"></a>
+            </div>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-fill"></i>
+                            Usuario
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'productos' %}">
+                            <i class="bi bi-list-ul me-2"></i>Listado de productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-tags me-2"></i>Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-truck me-2"></i>Proveedores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-graph-up me-2"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="content-header mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h1 class="text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Eliminar Producto
+                        </h1>
+                        <a href="{% url 'productos' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mensajes -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Tarjeta de Confirmación -->
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-trash me-2"></i>Confirmar Eliminación
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Alerta de advertencia -->
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-octagon me-2"></i>¡Atención! Esta acción no se puede deshacer
+                            </h6>
+                            <p class="mb-0">Estás a punto de eliminar permanentemente un producto del sistema.</p>
+                        </div>
+
+                        <!-- Información del producto a eliminar -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Información del Producto</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <th class="bg-light">N° Serie:</th>
+                                                <td>{{ producto.nro_serie }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Categoría:</th>
+                                                <td>{{ producto.categoria.nombre }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Modelo:</th>
+                                                <td>{{ producto.modelo.nombre }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Marca:</th>
+                                                <td>{{ producto.modelo.marca.nombre }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Estado:</th>
+                                                <td>
+                                                    <span class="badge 
+                                                        {% if producto.estado.nombre == 'Operativo' or producto.estado.nombre == 'Activo' %}
+                                                            bg-success
+                                                        {% elif producto.estado.nombre == 'En Mantención' %}
+                                                            bg-warning text-dark
+                                                        {% elif producto.estado.nombre == 'Dado de Baja' %}
+                                                            bg-danger
+                                                        {% else %}
+                                                            bg-secondary
+                                                        {% endif %}
+                                                    ">
+                                                        {{ producto.estado.nombre }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Proveedor:</th>
+                                                <td>{{ producto.proveedor.nombre }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light">Fecha Compra:</th>
+                                                <td>{{ producto.fecha_compra|date:"d/m/Y" }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Verificaciones de Seguridad</h6>
+                                <div class="alert alert-light border">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="check1">
+                                        <label class="form-check-label" for="check1">
+                                            He verificado que este producto no tiene asignaciones activas
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="check2">
+                                        <label class="form-check-label" for="check2">
+                                            Confirmo que este producto no está en mantención
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="check3">
+                                        <label class="form-check-label" for="check3">
+                                            Entiendo que esta acción eliminará todos los registros asociados
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Conteo de registros relacionados (opcional) -->
+                                <div class="alert alert-info">
+                                    <small>
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Registros asociados:</strong><br>
+                                        • Historial de estados: {{ producto.historial_estados.count }}<br>
+                                        • Mantenciones: {{ producto.mantenciones.count }}<br>
+                                        • Asignaciones: {{ producto.asignaciones.count }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formulario de Eliminación -->
+                        <form method="POST" action="{% url 'producto_delete' producto.pk %}" id="deleteForm">
+                            {% csrf_token %}
+                            
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="alert alert-danger">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                            <label class="form-check-label fw-bold" for="confirmDelete">
+                                                SÍ, comprendo las consecuencias y deseo eliminar permanentemente 
+                                                el producto <strong>{{ producto.nro_serie }}</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a href="{% url 'productos' %}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                                        </a>
+                                        <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                            <i class="bi bi-trash me-2"></i>Eliminar Permanentemente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script para validación de eliminación -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const confirmCheckbox = document.getElementById('confirmDelete');
+            const deleteButton = document.getElementById('deleteButton');
+            const deleteForm = document.getElementById('deleteForm');
+            
+            // Habilitar/deshabilitar botón según checkbox
+            confirmCheckbox.addEventListener('change', function() {
+                deleteButton.disabled = !this.checked;
+            });
+            
+            // Confirmación adicional antes de enviar
+            deleteForm.addEventListener('submit', function(e) {
+                if (!confirmCheckbox.checked) {
+                    e.preventDefault();
+                    alert('Debes confirmar la eliminación marcando la casilla.');
+                    return;
+                }
+                
+                // Confirmación final
+                const confirmed = confirm(
+                    '¿ESTÁS ABSOLUTAMENTE SEGURO?\n\n' +
+                    'Esta acción ELIMINARÁ PERMANENTEMENTE el producto:\n' +
+                    '• N° Serie: {{ producto.nro_serie }}\n' +
+                    '• Modelo: {{ producto.modelo.nombre }}\n' +
+                    '• Categoría: {{ producto.categoria.nombre }}\n\n' +
+                    'Esta acción NO se puede deshacer.'
+                );
+                
+                if (!confirmed) {
+                    e.preventDefault();
+                }
+            });
+            
+            
+            deleteButton.addEventListener('mouseout', function() {
+                if (!this.disabled) {
+                    this.classList.remove('btn-lg');
+                    this.innerHTML = '<i class="bi bi-trash me-2"></i>Eliminar Permanentemente';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

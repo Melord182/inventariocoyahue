@@ -14,7 +14,8 @@ from .models import (
 )
 from .serializers import (
     ProveedoresSerializer, MarcasSerializer, CategoriasSerializer,
-    ModelosSerializer, EstadosSerializer,
+    ModelosSerializer, EstadosSerializer, SucursalSerializer, CodigoQRSerializer,
+    
     ProductosListSerializer, ProductosDetailSerializer, ProductosCreateUpdateSerializer,
     UsuariosSerializer, UsuariosCreateSerializer,
     AsignacionesSerializer, AsignacionesCreateSerializer,
@@ -22,21 +23,6 @@ from .serializers import (
     HistorialEstadosSerializer, HistorialEstadosCreateSerializer,
     DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer
 )
-
-def productos(request):
-    """Vista para servir la página de los productos"""
-    return render(request, 'listar_productos.html')
-
-
-
-
-
-
-
-
-
-
-
 
 """
 
@@ -48,8 +34,6 @@ Cada una de las funciones cuenta con un decorador llamado 'action', este tiene p
 El decorador action nos dice si la funcion necesita la ID(detail) y qué método utilizará. Sirve para crear nuevos endpoints.
 
 """
-
-
 
 # ============= VIEWSETS TABLAS BÁSICAS =============
 
@@ -107,6 +91,14 @@ class EstadosViewSet(viewsets.ModelViewSet):
     ordering = ['nombre']
 
 
+class SucursalViewSet(viewsets.ModelViewSet):
+    queryset = Sucursal.objects.all()
+    serializer_class = SucursalSerializer
+
+class CodigoQRViewSet(viewsets.ModelViewSet):
+    queryset = CodigoQR.objects.all()
+    serializer_class = CodigoQRSerializer
+
 
 # ============= VIEWSET DE PRODUCTOS =============
 
@@ -120,7 +112,15 @@ class ProductosViewSet(viewsets.ModelViewSet):
     ordering = ['-fecha_compra']
     
     def get_queryset(self):
-        """Optimiza las queries con select_related"""
+        """
+        OPTIMIZACIÓN CON SELECT_RELATED:
+        
+        En lugar de hacer una consulta por cada relación (proveedor, modelo, etc.),
+        select_related hace un JOIN en SQL y trae todos los datos en una sola consulta.
+        
+        SIN select_related: 1 consulta + 1 consulta por cada producto para cada relación
+        CON select_related: 1 sola consulta con JOIN
+        """
         return Productos.objects.select_related(
             'proveedor', 'modelo', 'modelo__marca', 'categoria', 'estado'
         ).all()
@@ -445,3 +445,904 @@ class LogAccesoViewSet(viewsets.ReadOnlyModelViewSet):
         logs = self.get_queryset()[:50]
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
+    
+
+"""
+
+    VISTA DE LISTADO - Muestra múltiples registros en tabla
+    
+    ¿QUÉ HACE?
+    - Muestra todos los productos en una tabla HTML
+    - Aplica filtros de búsqueda, categoría, estado
+    - Ordena resultados (más recientes primero)
+    
+    FLUJO:
+    1. Obtiene productos de la BD (optimizado con select_related)
+    2. Aplica filtros desde formulario GET
+    3. Prepara datos para el template
+    4. Renderiza tabla HTML con resultados
+    
+    URL: /productos/
+
+"""
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from .models import Productos, Categorias, Estados, Marcas, Modelos
+from .forms import (
+    ProductoForm, ProductoFilterForm,
+    ProveedorForm, ProveedorFilterForm,
+    CategoriasForm, CategoriasFilterForm,
+    EstadosForm, EstadosFilterForm,
+    MarcasForm, MarcasFilterForm,
+    ModelosForm, ModelosFilterForm
+    
+    )
+
+ 
+# ============= VISTAS DE PROVEEDORES =============
+
+def proveedores_list(request):
+    """Lista de proveedores con filtros"""
+    
+    proveedores = Proveedores.objects.all()
+    
+    # Aplicar filtros
+    filter_form = ProveedorFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            proveedores = proveedores.filter(
+                Q(nombre__icontains=search) |
+                Q(rut__icontains=search) |
+                Q(contacto__icontains=search)
+            )
+    
+    # Ordenar por nombre
+    proveedores = proveedores.order_by('nombre')
+    
+    context = {
+        'proveedores': proveedores,
+        'filter_form': filter_form,
+        'total_proveedores': proveedores.count(),
+    }
+    
+    return render(request, 'listar_proveedores.html', context)
+
+
+def proveedores_create(request):
+    """Crear nuevo proveedor"""
+    
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST)
+        
+        if form.is_valid():
+            proveedor = form.save()
+            messages.success(request, f'Proveedor {proveedor.nombre} creado exitosamente.')
+            return redirect('proveedores')
+        else:
+            messages.error(request, 'Error al crear el proveedor. Verifica los datos.')
+    else:
+        form = ProveedorForm()
+    
+    context = {
+        'form': form,
+        'title': 'Agregar Proveedor',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_proveedores.html', context)
+
+
+def proveedores_edit(request, pk):
+    """Editar proveedor existente"""
+    
+    proveedor = get_object_or_404(Proveedores, pk=pk)
+    
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST, instance=proveedor)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Proveedor {proveedor.nombre} actualizado exitosamente.')
+            return redirect('proveedores')
+        else:
+            messages.error(request, 'Error al actualizar el proveedor.')
+    else:
+        form = ProveedorForm(instance=proveedor)
+    
+    context = {
+        'form': form,
+        'proveedor': proveedor,
+        'title': f'Editar Proveedor {proveedor.nombre}',
+        'action': 'Actualizar',
+    }
+    
+    return render(request, 'actualizar_proveedores.html', context)
+
+
+def proveedores_delete(request, pk):
+    """Eliminar proveedor"""
+    
+    proveedor = get_object_or_404(Proveedores, pk=pk)
+    
+    if request.method == 'POST':
+        nombre = proveedor.nombre
+        proveedor.delete()
+        messages.success(request, f'Proveedor {nombre} eliminado exitosamente.')
+        return redirect('proveedores')
+    
+    context = {
+        'proveedor': proveedor,
+    }
+    
+    return render(request, 'eliminar_proveedores.html', context)
+
+
+# ============= VISTAS DE CATEGORÍAS =============
+
+def categorias_list(request):
+    """Lista de categorías con filtros"""
+    
+    categorias = Categorias.objects.all()
+    
+    # Aplicar filtros
+    filter_form = CategoriasFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            categorias = categorias.filter(
+                Q(nombre__icontains=search) |
+                Q(descripcion__icontains=search)
+            )
+    
+    # Ordenar por nombre
+    categorias = categorias.order_by('nombre')
+    
+    context = {
+        'categorias': categorias,
+        'filter_form': filter_form,
+        'total_categorias': categorias.count(),
+    }
+    
+    return render(request, 'listar_categorias.html', context)
+
+
+def categorias_create(request):
+    """Crear nueva categoría"""
+    
+    if request.method == 'POST':
+        form = CategoriasForm(request.POST)
+        
+        if form.is_valid():
+            categoria = form.save()
+            messages.success(request, f'Categoría {categoria.nombre} creada exitosamente.')
+            return redirect('categorias')
+        else:
+            messages.error(request, 'Error al crear la categoría. Verifica los datos.')
+    else:
+        form = CategoriasForm()
+    
+    context = {
+        'form': form,
+        'title': 'Agregar Categoría',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_categorias.html', context)
+
+
+def categorias_edit(request, pk):
+    """Editar categoría existente"""
+    
+    categoria = get_object_or_404(Categorias, pk=pk)
+    
+    if request.method == 'POST':
+        form = CategoriasForm(request.POST, instance=categoria)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Categoría {categoria.nombre} actualizada exitosamente.')
+            return redirect('categorias')
+        else:
+            messages.error(request, 'Error al actualizar la categoría.')
+    else:
+        form = CategoriasForm(instance=categoria)
+    
+    context = {
+        'form': form,
+        'categoria': categoria,
+        'title': f'Editar Categoría {categoria.nombre}',
+        'action': 'Actualizar',
+    }
+    
+    return render(request, 'actualizar_categorias.html', context)
+
+
+def categorias_delete(request, pk):
+    """Eliminar categoría"""
+    
+    categoria = get_object_or_404(Categorias, pk=pk)
+    
+    if request.method == 'POST':
+        nombre = categoria.nombre
+        categoria.delete()
+        messages.success(request, f'Categoría {nombre} eliminada exitosamente.')
+        return redirect('categorias')
+    
+    context = {
+        'categoria': categoria,
+    }
+    
+    return render(request, 'eliminar_categorias.html', context)
+
+
+# ============= VISTAS DE MARCAS =============
+
+def marcas_list(request):
+    """Lista de marcas con filtros"""
+    
+    marcas = Marcas.objects.all()
+    
+    # Aplicar filtros
+    filter_form = MarcasFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            marcas = marcas.filter(nombre__icontains=search)
+    
+    # Ordenar por nombre
+    marcas = marcas.order_by('nombre')
+    
+    context = {
+        'marcas': marcas,
+        'filter_form': filter_form,
+        'total_marcas': marcas.count(),
+    }
+    
+    return render(request, 'listar_marcas.html', context)
+
+
+def marcas_create(request):
+    """Crear nueva marca"""
+    
+    if request.method == 'POST':
+        form = MarcasForm(request.POST)
+        
+        if form.is_valid():
+            marca = form.save()
+            messages.success(request, f'Marca {marca.nombre} creada exitosamente.')
+            return redirect('marcas')
+        else:
+            messages.error(request, 'Error al crear la marca. Verifica los datos.')
+    else:
+        form = MarcasForm()
+    
+    context = {
+        'form': form,
+        'title': 'Agregar Marca',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_marca.html', context)
+
+
+def marcas_edit(request, pk):
+    """Editar marca existente"""
+    
+    marca = get_object_or_404(Marcas, pk=pk)
+    
+    if request.method == 'POST':
+        form = MarcasForm(request.POST, instance=marca)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Marca {marca.nombre} actualizada exitosamente.')
+            return redirect('marcas')
+        else:
+            messages.error(request, 'Error al actualizar la marca.')
+    else:
+        form = MarcasForm(instance=marca)
+    
+    context = {
+        'form': form,
+        'marca': marca,
+        'title': f'Editar Marca {marca.nombre}',
+        'action': 'Actualizar',
+    }
+    
+    return render(request, 'actualizar_marca.html', context)
+
+
+def marcas_delete(request, pk):
+    """Eliminar marca"""
+    
+    marca = get_object_or_404(Marcas, pk=pk)
+    
+    if request.method == 'POST':
+        nombre = marca.nombre
+        marca.delete()
+        messages.success(request, f'Marca {nombre} eliminada exitosamente.')
+        return redirect('marcas')
+    
+    context = {
+        'marca': marca,
+    }
+    
+    return render(request, 'eliminar_marca.html', context)
+
+
+# ============= VISTAS DE MODELOS =============
+
+def modelos_list(request):
+    """Lista de modelos con filtros"""
+    
+    modelos = Modelos.objects.select_related('marca').all()
+    
+    # Aplicar filtros
+    filter_form = ModelosFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            modelos = modelos.filter(
+                Q(nombre__icontains=search) |
+                Q(marca__nombre__icontains=search)
+            )
+        
+        marca = filter_form.cleaned_data.get('marca')
+        if marca:
+            modelos = modelos.filter(marca=marca)
+    
+    # Ordenar por marca y nombre
+    modelos = modelos.order_by('marca__nombre', 'nombre')
+    
+    context = {
+        'modelos': modelos,
+        'filter_form': filter_form,
+        'total_modelos': modelos.count(),
+    }
+    
+    return render(request, 'listar_modelos.html', context)
+
+
+def modelos_create(request):
+    """Crear nuevo modelo"""
+    
+    if request.method == 'POST':
+        form = ModelosForm(request.POST)
+        
+        if form.is_valid():
+            modelo = form.save()
+            messages.success(request, f'Modelo {modelo.nombre} creado exitosamente.')
+            return redirect('modelos')
+        else:
+            messages.error(request, 'Error al crear el modelo. Verifica los datos.')
+    else:
+        form = ModelosForm()
+    
+    context = {
+        'form': form,
+        'title': 'Agregar Modelo',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_modelo.html', context)
+
+
+def modelos_edit(request, pk):
+    """Editar modelo existente"""
+    
+    modelo = get_object_or_404(Modelos, pk=pk)
+    
+    if request.method == 'POST':
+        form = ModelosForm(request.POST, instance=modelo)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Modelo {modelo.nombre} actualizado exitosamente.')
+            return redirect('modelos')
+        else:
+            messages.error(request, 'Error al actualizar el modelo.')
+    else:
+        form = ModelosForm(instance=modelo)
+    
+    context = {
+        'form': form,
+        'modelo': modelo,
+        'title': f'Editar Modelo {modelo.nombre}',
+        'action': 'Actualizar',
+    }
+    
+    return render(request, 'actualizar_modelo.html', context)
+
+
+def modelos_delete(request, pk):
+    """Eliminar modelo"""
+    
+    modelo = get_object_or_404(Modelos, pk=pk)
+    
+    if request.method == 'POST':
+        nombre = modelo.nombre
+        modelo.delete()
+        messages.success(request, f'Modelo {nombre} eliminado exitosamente.')
+        return redirect('modelos')
+    
+    context = {
+        'modelo': modelo,
+    }
+    
+    return render(request, 'eliminar_modelo.html', context)
+
+
+# ============= VISTAS DE ESTADOS =============
+
+def estados_list(request):
+    """Lista de estados con filtros"""
+    
+    estados = Estados.objects.all()
+    
+# Aplicar filtros
+    filter_form = EstadosFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            estados = estados.filter(
+                Q(nombre__icontains=search) |
+                Q(descripcion__icontains=search)
+            )
+
+    # Ordenar por nombre
+    estados = estados.order_by('nombre')
+    
+    context = {
+        'estados': estados,
+        'filter_form': filter_form,
+        'total_estados': estados.count(),
+    }
+    
+    return render(request, 'listar_estados.html', context)
+
+
+def estados_create(request):
+    """Crear nuevo estado"""
+    
+    if request.method == 'POST':
+        form = EstadosForm(request.POST)
+        
+        if form.is_valid():
+            estado = form.save()
+            messages.success(request, f'Estado {estado.nombre} creado exitosamente.')
+            return redirect('estados')
+        else:
+            messages.error(request, 'Error al crear el estado. Verifica los datos.')
+    else:
+        form = EstadosForm()
+    
+    context = {
+        'form': form,
+        'title': 'Agregar Estado',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_estado.html', context)
+
+
+def estados_edit(request, pk):
+    """Editar estado existente"""
+    
+    estado = get_object_or_404(Estados, pk=pk)
+    
+    if request.method == 'POST':
+        form = EstadosForm(request.POST, instance=estado)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Estado {estado.nombre} actualizado exitosamente.')
+            return redirect('estados')
+        else:
+            messages.error(request, 'Error al actualizar el estado.')
+    else:
+        form = EstadosForm(instance=estado)
+    
+    context = {
+        'form': form,
+        'estado': estado,
+        'title': f'Editar Estado {estado.nombre}',
+        'action': 'Actualizar',
+    }
+    
+    return render(request, 'actualizar_estado.html', context)
+
+
+def estados_delete(request, pk):
+    """Eliminar estado"""
+    
+    estado = get_object_or_404(Estados, pk=pk)
+    
+    if request.method == 'POST':
+        nombre = estado.nombre
+        estado.delete()
+        messages.success(request, f'Estado {nombre} eliminado exitosamente.')
+        return redirect('estados')
+    
+    context = {
+        'estado': estado,
+    }
+    
+    return render(request, 'eliminar_estado.html', context)
+
+
+# ============= NOTIFICACIONES =============
+
+def notificaciones(request):
+    """Página de notificaciones del usuario"""
+    
+    # Obtener todas las notificaciones del usuario actual (o todas si no hay autenticación)
+    notificaciones_list = Notificaciones.objects.all().order_by('-fecha', '-hora')
+    
+    # Paginación (10 notificaciones por página)
+    paginator = Paginator(notificaciones_list, 10)
+    page_number = request.GET.get('page')
+    notificaciones_page = paginator.get_page(page_number)
+    
+    # Estadísticas
+    total_notificaciones = notificaciones_list.count()
+    notificaciones_no_leidas = notificaciones_list.filter(leido=False).count()
+    notificaciones_leidas = total_notificaciones - notificaciones_no_leidas
+    
+    context = {
+        'notificaciones': notificaciones_page,
+        'total_notificaciones': total_notificaciones,
+        'notificaciones_no_leidas': notificaciones_no_leidas,
+        'notificaciones_leidas': notificaciones_leidas,
+    }
+    
+    return render(request, 'notificaciones.html', context)
+
+def marcar_leida(request, pk):
+    """Marcar una notificación como leída"""
+    notificacion = get_object_or_404(Notificaciones, pk=pk)
+    notificacion.leido = True
+    notificacion.save()
+    
+    messages.success(request, 'Notificación marcada como leída.')
+    return redirect('notificaciones')
+
+def marcar_todas_leidas(request):
+    """Marcar todas las notificaciones como leídas"""
+    if request.method == 'POST':
+        Notificaciones.objects.filter(leido=False).update(leido=True)
+        messages.success(request, 'Todas las notificaciones han sido marcadas como leídas.')
+    
+    return redirect('notificaciones')
+
+
+# ============= CONFIGURACIÓN =============
+
+def configuracion(request):
+    """Página de configuración del sistema"""
+    
+    # Obtener contador de notificaciones no leídas para el navbar
+    notificaciones_no_leidas = Notificaciones.objects.filter(leido=False).count()
+    
+    context = {
+        'title': 'Configuración del Sistema',
+        'notificaciones_no_leidas': notificaciones_no_leidas,
+    }
+    
+    return render(request, 'configuracion.html', context)
+
+
+# ============= VISTA PRINCIPAL DE PRODUCTOS =============
+
+def productos_list(request):
+    """Lista de productos con filtros"""
+    
+    # Obtener todos los productos con relaciones
+    productos = Productos.objects.select_related(
+        'categoria', 'modelo', 'modelo__marca', 'estado', 'proveedor'
+    ).all()
+    
+    # Aplicar filtros
+    filter_form = ProductoFilterForm(request.GET)
+    
+    if filter_form.is_valid():
+        # Filtro de búsqueda por texto
+        search = filter_form.cleaned_data.get('search')
+        if search:
+            productos = productos.filter(
+                Q(nro_serie__icontains=search) |
+                Q(modelo__nombre__icontains=search) |
+                Q(categoria__nombre__icontains=search)
+            )
+        
+        # Filtro por categoría
+        categoria = filter_form.cleaned_data.get('categoria')
+        if categoria:
+            productos = productos.filter(categoria=categoria)
+        
+        # Filtro por estado
+        estado = filter_form.cleaned_data.get('estado')
+        if estado:
+            productos = productos.filter(estado=estado)
+        
+        # Filtro por proveedor
+        proveedor = filter_form.cleaned_data.get('proveedor')
+        if proveedor:
+            productos = productos.filter(proveedor=proveedor)
+
+        # Filtro por disponibilidad
+        solo_disponibles = filter_form.cleaned_data.get('solo_disponibles')
+        if solo_disponibles:
+            from .models import Asignaciones
+            productos_asignados_ids = Asignaciones.objects.filter(
+                fecha_devolucion__isnull=True
+            ).values_list('producto_id', flat=True)
+            productos = productos.exclude(id__in=productos_asignados_ids)
+    
+    # Ordenar por fecha de compra (más recientes primero)
+    productos = productos.order_by('-fecha_compra')
+    
+    context = {
+        'productos': productos,
+        'filter_form': filter_form,
+        'total_productos': productos.count(),
+    }
+    
+    return render(request, 'listar_productos.html', context)
+
+
+# ============= CREAR PRODUCTO =============
+
+def productos_create(request):
+
+    """Crear nuevo producto"""
+    marcas = Marcas.objects.all()
+
+    if request.method == 'POST':
+        form = ProductoForm(request.POST)
+        
+        if form.is_valid():
+            producto = form.save()
+            messages.success(request, f'Producto {producto.nro_serie} creado exitosamente.')
+            return redirect('productos')
+        else:
+            messages.error(request, 'Error al crear el producto. Verifica los datos.')
+    else:
+        form = ProductoForm()
+    
+    context = {
+        'form': form,
+        'marcas': marcas,  # ← Pasamos marcas manualmente
+        'title': 'Agregar Producto',
+        'action': 'Crear',
+    }
+    
+    return render(request, 'agregar_productos.html', context)
+
+
+# ============= EDITAR PRODUCTO =============
+
+def productos_edit(request, pk):
+    producto = get_object_or_404(Productos, pk=pk)
+    
+    if request.method == 'POST':
+        # Crear una copia mutable de request.POST
+        post_data = request.POST.copy()
+        
+        # Forzar los valores de los campos bloqueados
+        post_data['nro_serie'] = producto.nro_serie
+        post_data['categoria'] = producto.categoria.id
+        post_data['modelo'] = producto.modelo.id
+        
+        form = ProductoForm(post_data, instance=producto)
+        
+        if form.is_valid():
+            # Guardar normalmente - los campos ya están forzados
+            form.save()
+            messages.success(request, f'Producto {producto.nro_serie} actualizado exitosamente.')
+            return redirect('productos')
+        else:
+            # Mostrar errores detallados para debug
+            print("Errores del formulario:", form.errors)
+            messages.error(request, f'Error al actualizar el producto: {form.errors}')
+    else:
+        form = ProductoForm(instance=producto)
+    
+    context = {
+        'form': form,
+        'producto': producto,
+        'title': f'Editar Producto {producto.nro_serie}',
+    }
+    
+    return render(request, 'actualizar_productos.html', context)
+    
+
+# ============= ELIMINAR PRODUCTO =============
+
+def productos_delete(request, pk):
+    """Eliminar producto"""
+    
+    producto = get_object_or_404(Productos, pk=pk)
+    
+    if request.method == 'POST':
+        nro_serie = producto.nro_serie
+        producto.delete()
+        messages.success(request, f'Producto {nro_serie} eliminado exitosamente.')
+        return redirect('productos')
+    
+    context = {
+        'producto': producto,
+    }
+    
+    return render(request, 'eliminar_productos.html', context)
+
+
+# ============= DETALLE DE PRODUCTO =============
+
+def producto_detail(request, pk):
+    """Ver detalle completo de un producto"""
+    
+    producto = get_object_or_404(
+        Productos.objects.select_related(
+            'categoria', 'modelo', 'modelo__marca', 'estado', 'proveedor'
+        ).prefetch_related(
+            'asignaciones', 'mantenciones', 'historial_estados'
+        ),
+        pk=pk
+    )
+    
+    context = {
+        'producto': producto,
+    }
+    
+    return render(request, 'producto_detail.html', context)
+
+
+# ============= AJAX: CARGAR MODELOS POR MARCA =============
+"""
+    ENDPOINT AJAX - Carga modelos dependiendo de la marca seleccionada
+    
+    ¿CÓMO FUNCIONA EL FLUJO AJAX?
+    1. Usuario selecciona una marca en el formulario HTML
+    2. JavaScript detecta el cambio y llama a esta URL
+    3. Esta función consulta los modelos de esa marca
+    4. Devuelve los datos en formato JSON
+    5. JavaScript recibe los datos y actualiza el select de modelos
+    
+    EJEMPLO DE LLAMADA:
+    GET /get-modelos-by-marca/?marca_id=1
+    
+    RESPUESTA:
+    [{"id": 1, "nombre": "Modelo A"}, {"id": 2, "nombre": "Modelo B"}]
+    """
+def get_modelos_by_marca(request):
+    """API endpoint para obtener modelos de una marca (AJAX)"""
+    
+    marca_id = request.GET.get('marca_id')
+    
+    if marca_id:
+        modelos = Modelos.objects.filter(marca_id=marca_id).values('id', 'nombre')
+        return JsonResponse(list(modelos), safe=False)
+    
+    return JsonResponse([], safe=False)
+
+
+# ============= FILTROS RÁPIDOS =============
+
+def productos_disponibles(request):
+    """Productos sin asignación activa"""
+    
+    from .models import Asignaciones
+    
+    productos_asignados_ids = Asignaciones.objects.filter(
+        fecha_devolucion__isnull=True
+    ).values_list('producto_id', flat=True)
+    
+    productos = Productos.objects.select_related(
+        'categoria', 'modelo', 'estado', 'proveedor'
+    ).exclude(id__in=productos_asignados_ids)
+    
+    filter_form = ProductoFilterForm()
+    
+    context = {
+        'productos': productos,
+        'filter_form': filter_form,
+        'total_productos': productos.count(),
+        'filtro_activo': 'disponibles',
+    }
+    
+    return render(request, 'listar_productos.html', context)
+
+
+# ============= DASHBOARD =============
+
+def dashboard(request):
+    """Dashboard principal del sistema"""
+    
+    from django.db.models import Count
+    from .models import Asignaciones
+    
+    # Estadísticas básicas
+    total_productos = Productos.objects.count()
+    productos_operativos = Productos.objects.filter(estado__nombre='Operativo').count()
+    productos_mantencion = Productos.objects.filter(estado__nombre='En Mantención').count()
+    
+    productos_asignados = Asignaciones.objects.filter(
+        fecha_devolucion__isnull=True
+    ).count()
+    
+    total_proveedores = Proveedores.objects.count()
+    total_categorias = Categorias.objects.count()
+    total_marcas = Marcas.objects.count()
+    total_modelos = Modelos.objects.count()
+    
+    # Productos por categoría
+    productos_por_categoria = Categorias.objects.annotate(
+        total=Count('productos')
+    ).filter(total__gt=0).order_by('-total')[:5]
+    
+    # Calcular porcentajes para categorías
+    for categoria in productos_por_categoria:
+        if total_productos > 0:
+            categoria.porcentaje = (categoria.total / total_productos) * 100
+        else:
+            categoria.porcentaje = 0
+    
+    # Productos por estado
+    productos_por_estado = Estados.objects.annotate(
+        total=Count('productos')
+    ).filter(total__gt=0).order_by('-total')
+    
+    # Calcular porcentajes para estados
+    for estado in productos_por_estado:
+        if total_productos > 0:
+            estado.porcentaje = (estado.total / total_productos) * 100
+        else:
+            estado.porcentaje = 0
+    
+    # Últimos productos agregados
+    ultimos_productos = Productos.objects.select_related(
+        'categoria', 'modelo', 'estado'
+    ).order_by('-fecha_compra')[:5]
+    
+    context = {
+        # Estadísticas principales
+        'total_productos': total_productos,
+        'productos_operativos': productos_operativos,
+        'productos_mantencion': productos_mantencion,
+        'productos_asignados': productos_asignados,
+        
+        # Totales por entidad
+        'total_proveedores': total_proveedores,
+        'total_categorias': total_categorias,
+        'total_marcas': total_marcas,
+        'total_modelos': total_modelos,
+        
+        # Datos para gráficos/tablas
+        'productos_por_categoria': productos_por_categoria,
+        'productos_por_estado': productos_por_estado,
+        'ultimos_productos': ultimos_productos,
+    }
+    
+    return render(request, 'dashboard.html', context)
+
+
+# ============= REPORTES =============
+
+def reportes(request):
+    """Página de reportes (placeholder para futura implementación)"""
+    
+    context = {
+        'title': 'Generador de Reportes',
+    }
+    
+    return render(request, 'reportes.html', context)
