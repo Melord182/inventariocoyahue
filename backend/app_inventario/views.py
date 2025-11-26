@@ -18,7 +18,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import (
     Proveedores, Marcas, Categorias, Modelos, Estados, Productos,
     Usuarios, Asignaciones, Mantenciones, HistorialEstados,
-    Documentaciones, Notificaciones, LogAcceso, Sucursales, CodigoQR
+    Documentaciones, Notificaciones, LogAcceso, Sucursales, CodigoQR, Usuarios
 )
 from .serializers import (
     ProveedoresSerializer, MarcasSerializer, CategoriasSerializer,
@@ -28,7 +28,7 @@ from .serializers import (
     AsignacionesSerializer,
     MantencionesSerializer,
     HistorialEstadosSerializer, HistorialEstadosCreateSerializer,
-    DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer
+    DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer, UsuariosUpdateSerializer
 )
 from .forms import (
     ProductoForm, ProductoFilterForm,
@@ -257,13 +257,39 @@ class ProductosViewSet(viewsets.ModelViewSet):
 
 # ============= VIEWSET DE USUARIOS =============
 
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Usuarios
+from .serializers import (
+    UsuariosSerializer,
+    UsuariosCreateSerializer,
+    UsuariosUpdateSerializer,
+)
+
 
 class UsuariosViewSet(viewsets.ModelViewSet):
-    """ViewSet para gestionar Usuarios"""
+    """
+    CRUD de usuarios + endpoints de perfil y cambio de contraseña.
+
+    Rutas principales:
+      - GET    /api/usuarios/               -> lista de usuarios
+      - POST   /api/usuarios/               -> crear usuario
+      - GET    /api/usuarios/{id}/          -> detalle
+      - PATCH  /api/usuarios/{id}/          -> actualizar usuario
+      - DELETE /api/usuarios/{id}/          -> eliminar usuario
+
+      - GET    /api/usuarios/me/            -> datos del usuario logueado
+      - PATCH  /api/usuarios/me/            -> actualizar sus datos
+
+      - POST   /api/usuarios/cambiar_password/ -> cambiar contraseña
+    """
+
     queryset = Usuarios.objects.select_related("user").all()
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["rol"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
         "user__username",
         "user__first_name",
@@ -274,39 +300,84 @@ class UsuariosViewSet(viewsets.ModelViewSet):
     ordering = ["user__username"]
 
     def get_serializer_class(self):
-        """Usa serializer diferente para crear usuarios"""
+        """
+        Usa distintos serializers según la acción:
+        - create: crea User + Usuarios
+        - update/partial_update: actualiza datos + password
+        - list/retrieve/me: lectura
+        """
         if self.action == "create":
             return UsuariosCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return UsuariosUpdateSerializer
         return UsuariosSerializer
 
-    @action(detail=False, methods=["get"])
+    # ---------- PERFIL: /api/usuarios/me/ ----------
+    @action(detail=False, methods=["get", "patch"], url_path="me")
     def me(self, request):
-        """Retorna información del usuario actual"""
+        """
+        GET   /api/usuarios/me/     -> datos del usuario actual
+        PATCH /api/usuarios/me/     -> actualizar nombre/email del usuario actual
+        """
         try:
             usuario = Usuarios.objects.get(user=request.user)
-            serializer = self.get_serializer(usuario)
-            return Response(serializer.data)
         except Usuarios.DoesNotExist:
             return Response(
-                {"error": "Usuario no encontrado"},
+                {"detail": "Usuario no encontrado"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-    @action(detail=True, methods=["get"])
-    def asignaciones_activas(self, request, pk=None):
-        """Retorna las asignaciones activas de un usuario"""
-        usuario = self.get_object()
-        asignaciones = usuario.asignaciones.filter(fecha_devolucion__isnull=True)
-        serializer = AsignacionesSerializer(asignaciones, many=True)
+        # Leer datos
+        if request.method.lower() == "get":
+            serializer = UsuariosSerializer(usuario)
+            return Response(serializer.data)
+
+        # Actualizar datos (perfil)
+        serializer = UsuariosUpdateSerializer(
+            usuario, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data)
 
-    @action(detail=True, methods=["get"])
-    def historial_asignaciones(self, request, pk=None):
-        """Retorna el historial completo de asignaciones"""
-        usuario = self.get_object()
-        asignaciones = usuario.asignaciones.all()
-        serializer = AsignacionesSerializer(asignaciones, many=True)
-        return Response(serializer.data)
+    # ---------- CAMBIO DE CONTRASEÑA: /api/usuarios/cambiar_password/ ----------
+    @action(detail=False, methods=["post"], url_path="cambiar_password")
+    def cambiar_password(self, request):
+        """
+        POST /api/usuarios/cambiar_password/
+
+        Body JSON:
+        {
+          "old_password": "actual",
+          "new_password": "NuevaClave123!"
+        }
+        """
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not old_password or not new_password:
+            return Response(
+                {"detail": "old_password y new_password son obligatorios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.check_password(old_password):
+          return Response(
+              {"detail": "La contraseña actual no es correcta."},
+              status=status.HTTP_400_BAD_REQUEST,
+          )
+
+        if len(new_password) < 8:
+            return Response(
+                {"detail": "La nueva contraseña debe tener al menos 8 caracteres."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Contraseña actualizada correctamente."})
 
 
 # ============= VIEWSET DE ASIGNACIONES =============

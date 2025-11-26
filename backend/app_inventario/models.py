@@ -1,3 +1,8 @@
+from django.core.files import File
+from django.conf import settings
+from django.urls import reverse
+from io import BytesIO
+import qrcode
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -30,8 +35,7 @@ class Marcas(models.Model):
 class Categorias(models.Model):
     """Categorías de productos (Computadores, Impresoras, Tablets, etc.)"""
     nombre = models.CharField(max_length=100, unique=True)
-    descripcion = models.TextField(blank=True, null=True)
-
+    imagen =models.ImageField(upload_to='categorias/', blank=True, null=True)
     class Meta:
         verbose_name_plural = "Categorías"
 
@@ -255,10 +259,25 @@ class LogAcceso(models.Model):
     
 
 class CodigoQR(models.Model):
-    """Código QR asociado a un producto"""
-    producto = models.OneToOneField(Productos, on_delete=models.CASCADE, related_name='qr')
-    imagen_qr = models.ImageField(upload_to="qrs/", null=True, blank=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    producto = models.OneToOneField(
+        Productos, 
+        on_delete=models.CASCADE,
+        related_name='codigo_qr'
+    )
+    imagen_qr = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
+    
+    def generar_qr(self):
+        relative_url = reverse('producto_detail', kwargs={'pk': self.producto.id})
+        base = settings.BASE_URL.rstrip('/')
+        full_url = f"{base}{relative_url}"
 
-    def __str__(self):
-        return f"QR de {self.producto.nro_serie}"
+        print("URL GENERADA:", full_url)
+
+        # Crear QR
+        qr = qrcode.make(full_url)
+        buffer = BytesIO()
+        qr.save(buffer, format='PNG')
+        buffer.seek(0)
+
+        filename = f"qr_producto_{self.producto.id}.png"
+        self.imagen_qr.save(filename, File(buffer), save=False)

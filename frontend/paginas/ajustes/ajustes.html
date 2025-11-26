@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ajustes - Inventario Coyahue</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajustes de cuenta - Grupo Coyahue</title>
 
   <!-- Bootstrap / Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,312 +13,237 @@
   <link rel="stylesheet" href="/src/css/styles.css">
 
   <style>
-    .ajustes-card {
-      max-width: 750px;
-    }
-
-    /* Avatar con inicial */
-    .avatar-wrapper {
-      width: 130px;
-      height: 130px;
-    }
-
-    .avatar-circle {
-      width: 130px;
-      height: 130px;
+    .settings-avatar {
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #1e88e5, #42a5f5);
+      background: #0d6efd;
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      font-size: 3.2rem;
+      font-size: 2.2rem;
       font-weight: 600;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       position: relative;
       overflow: hidden;
     }
 
-    .avatar-circle img {
+    .settings-avatar img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .avatar-initial {
-      z-index: 1;
-    }
-
-    .avatar-overlay {
+    .settings-avatar-upload {
       position: absolute;
-      bottom: 4px;
-      right: 4px;
-      width: 34px;
-      height: 34px;
+      bottom: 0;
+      right: 0;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
       border-radius: 50%;
-      background: #000000aa;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      border: 2px solid #ffffff;
+      font-size: 0.8rem;
     }
 
-    /* Fuerza contraseña */
     .password-strength {
       height: 6px;
-      border-radius: 6px;
-      background: #ddd;
-      margin-top: 6px;
-      transition: .3s;
+      border-radius: 999px;
+      background-color: #e9ecef;
+      margin-bottom: 4px;
+      overflow: hidden;
     }
-    .strength-weak { background: #e74c3c !important; }
-    .strength-medium { background: #f39c12 !important; }
-    .strength-strong { background: #27ae60 !important; }
 
-    .msg-validacion {
-      font-size: 0.85rem;
-      margin-top: 4px;
+    .password-strength::after {
+      content: "";
+      display: block;
+      height: 100%;
+      width: 0%;
+      transition: width 0.2s linear;
+    }
+
+    .password-strength.strength-weak::after {
+      width: 33%;
+      background-color: #dc3545;
+    }
+
+    .password-strength.strength-medium::after {
+      width: 66%;
+      background-color: #ffc107;
+    }
+
+    .password-strength.strength-strong::after {
+      width: 100%;
+      background-color: #28a745;
     }
   </style>
 </head>
 
-<body data-theme="light">
-
+<body>
   <!-- TOPBAR -->
-  <nav id="app-topbar" class="topbar"></nav>
+  <nav class="topbar" id="app-topbar"></nav>
 
   <div class="app-container">
-
     <!-- SIDEBAR -->
-    <aside id="app-sidebar" class="sidebar"></aside>
+    <aside class="sidebar" id="app-sidebar"></aside>
 
-    <!-- CONTENIDO -->
+    <!-- CONTENIDO PRINCIPAL -->
     <main class="main-content">
+      <div class="container-fluid">
 
-      <h2 class="fw-bold text-primary mb-4">Ajustes</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="fw-bold text-primary mb-0">Ajustes de cuenta</h2>
+            <p class="text-muted mb-0">Administra tus datos personales y la seguridad de tu cuenta.</p>
+          </div>
+        </div>
 
-      <div class="card p-4 ajustes-card">
-
-        <!-- TABS -->
-        <ul class="nav nav-pills mb-3" id="ajustesTabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-perfil-btn" data-bs-toggle="pill"
-                    data-bs-target="#tab-perfil" type="button" role="tab">
-              <i class="bi bi-person-circle me-1"></i> Perfil
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-seguridad-btn" data-bs-toggle="pill"
-                    data-bs-target="#tab-seguridad" type="button" role="tab">
-              <i class="bi bi-shield-lock me-1"></i> Seguridad
-            </button>
-          </li>
-        </ul>
-
-        <div class="tab-content" id="ajustesTabsContent">
-
-          <!-- TAB PERFIL -->
-          <div class="tab-pane fade show active" id="tab-perfil" role="tabpanel">
-
-            <div class="d-flex flex-column align-items-center mb-4">
-              <div class="avatar-wrapper position-relative">
-                <div id="avatarCircle" class="avatar-circle">
-                  <span id="avatarInitial" class="avatar-initial">U</span>
-                  <!-- Imagen se inyecta dinámicamente si el usuario sube una -->
-                </div>
-
-                <label class="avatar-overlay" for="uploadPhoto" title="Cambiar foto">
-                  <i class="bi bi-camera-fill text-white"></i>
-                </label>
-                <input type="file" id="uploadPhoto" accept="image/*" class="d-none">
+        <div class="row g-4">
+          <!-- Columna izquierda: Perfil / Seguridad -->
+          <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-white border-0 pb-0">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="perfil-tab" data-bs-toggle="tab"
+                            data-bs-target="#perfilTabPane" type="button" role="tab">
+                      <i class="bi bi-person-badge me-1"></i> Perfil
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="seguridad-tab" data-bs-toggle="tab"
+                            data-bs-target="#seguridadTabPane" type="button" role="tab">
+                      <i class="bi bi-shield-lock me-1"></i> Seguridad
+                    </button>
+                  </li>
+                </ul>
               </div>
-              <small class="text-muted">
-                La inicial se genera según tu nombre. Puedes subir una foto si quieres 😊
-              </small>
+
+              <div class="card-body">
+                <div class="tab-content">
+                  <!-- TAB PERFIL -->
+                  <div class="tab-pane fade show active" id="perfilTabPane" role="tabpanel">
+                    <form id="perfilForm" class="mt-3">
+                      <div class="d-flex align-items-center mb-4">
+                        <div class="settings-avatar me-3" id="avatarCircle">
+                          <span id="avatarInitial">U</span>
+                          <label class="settings-avatar-upload" for="uploadPhoto" title="Cambiar foto">
+                            <i class="bi bi-camera"></i>
+                          </label>
+                          <input type="file" id="uploadPhoto" accept="image/*" hidden>
+                        </div>
+                        <div>
+                          <h5 class="mb-1">Foto de perfil</h5>
+                          <p class="text-muted small mb-0">
+                            La inicial se genera según tu nombre. Puedes subir una imagen si quieres personalizarla.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label">Nombre completo</label>
+                          <input type="text" id="nombreUsuario" class="form-control" placeholder="Tu nombre">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Correo electrónico</label>
+                          <input type="email" id="emailUsuario" class="form-control" placeholder="tucorreo@ejemplo.cl">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Teléfono</label>
+                          <input type="text" id="telefonoUsuario" class="form-control" placeholder="+56 9 1234 5678">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Cargo / Rol</label>
+                          <input type="text" id="cargoUsuario" class="form-control" placeholder="Ej: Administrador">
+                        </div>
+                      </div>
+
+                      <div class="mt-4 d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                          <i class="bi bi-check-circle me-2"></i> Guardar cambios
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  <!-- TAB SEGURIDAD -->
+                  <div class="tab-pane fade" id="seguridadTabPane" role="tabpanel">
+                    <form id="passwordForm" class="mt-3">
+                      <div class="mb-3">
+                        <label class="form-label">Contraseña actual</label>
+                        <input type="password" id="passActual" class="form-control" placeholder="Contraseña actual">
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label">Nueva contraseña</label>
+                        <input type="password" id="passNueva" class="form-control" placeholder="Nueva contraseña">
+                        <div class="password-strength mt-2" id="strengthBar"></div>
+                        <small class="text-muted" id="msgPass">
+                          Debe tener mínimo 8 caracteres, una mayúscula y un número 😊
+                        </small>
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label">Confirmar nueva contraseña</label>
+                        <input type="password" id="passConfirm" class="form-control" placeholder="Repite la nueva contraseña">
+                      </div>
+
+                      <div class="mt-3 d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                          <i class="bi bi-shield-lock me-2"></i> Guardar contraseña
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna derecha: info / ayuda -->
+          <div class="col-lg-4">
+            <div class="card shadow-sm border-0 mb-3">
+              <div class="card-body">
+                <h6 class="fw-semibold mb-2">
+                  <i class="bi bi-info-circle me-1"></i> Consejos de seguridad
+                </h6>
+                <ul class="small text-muted mb-0">
+                  <li>Usa contraseñas distintas en otros sistemas.</li>
+                  <li>No compartas tu usuario ni tu contraseña con terceros.</li>
+                  <li>Cambia tu contraseña periódicamente.</li>
+                </ul>
+              </div>
             </div>
 
-            <form id="perfilForm">
-              <div class="mb-3">
-                <label class="form-label">Nombre Completo</label>
-                <input class="form-control" id="nombreUsuario" type="text" placeholder="Ej: María José Antilef" required>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Email</label>
-                <input class="form-control" id="emailUsuario" type="email" placeholder="usuario@correo.com" required>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Teléfono</label>
-                <input class="form-control" id="telefonoUsuario" type="text" placeholder="+569xxxxxxxx">
-              </div>
-
-              <div class="text-end">
-                <button class="btn btn-primary" onclick="guardarPerfil(event)">
-                  <i class="bi bi-check-circle me-2"></i> Guardar cambios
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- TAB SEGURIDAD -->
-          <div class="tab-pane fade" id="tab-seguridad" role="tabpanel">
-
-            <form id="passwordForm" class="mt-3">
-
-              <div class="mb-3">
-                <label class="form-label">Contraseña actual</label>
-                <input type="password" id="passActual" class="form-control" required>
-              </div>
-
-              <div class="mb-1">
-                <label class="form-label">Nueva contraseña</label>
-                <input type="password" id="passNueva" class="form-control" required>
-                <div id="strengthBar" class="password-strength"></div>
-                <p id="msgPass" class="msg-validacion text-muted">
-                  Debe tener mínimo 8 caracteres, una mayúscula y un número 😊
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <h6 class="fw-semibold mb-2">
+                  <i class="bi bi-person-badge me-1"></i> Información de la cuenta
+                </h6>
+                <p class="small text-muted mb-1">
+                  Aquí puedes actualizar tus datos personales asociados al sistema de inventario.
+                </p>
+                <p class="small text-muted mb-0">
+                  Para cambios de permisos o desactivar cuentas, contacta al administrador del sistema.
                 </p>
               </div>
-
-              <div class="mb-3">
-                <label class="form-label">Confirmar nueva contraseña</label>
-                <input type="password" id="passConfirm" class="form-control" required>
-              </div>
-
-              <div class="text-end">
-                <button class="btn btn-primary" onclick="cambiarPass(event)">
-                  <i class="bi bi-shield-lock me-2"></i> Guardar contraseña
-                </button>
-              </div>
-
-            </form>
+            </div>
           </div>
-
         </div>
+
       </div>
-
-      <footer class="text-center mt-4 small text-muted">
-        © 2025 Grupo Coyahue — Sistema Inventario
-      </footer>
-
     </main>
   </div>
 
-  <!-- SCRIPTS -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="/src/js/main.js"></script>
-
-  <script>
-    // ========= PERFIL =========
-    const nombreUsuario = document.getElementById("nombreUsuario");
-    const avatarInitial = document.getElementById("avatarInitial");
-    const avatarCircle = document.getElementById("avatarCircle");
-    const uploadPhoto = document.getElementById("uploadPhoto");
-
-    // Actualizar inicial según nombre
-    nombreUsuario.addEventListener("input", () => {
-      const nombre = nombreUsuario.value.trim();
-      avatarInitial.textContent = nombre ? nombre.charAt(0).toUpperCase() : "U";
-    });
-
-    // Foto subida (opcional): reemplaza inicial por imagen
-    uploadPhoto.addEventListener("change", () => {
-      const file = uploadPhoto.files[0];
-      if (!file) return;
-
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(file);
-
-      // Limpia contenido anterior y coloca imagen
-      avatarCircle.innerHTML = "";
-      avatarCircle.appendChild(img);
-    });
-
-    function guardarPerfil(e) {
-      e.preventDefault();
-      Swal.fire({
-        icon: "success",
-        title: "Perfil actualizado",
-        timer: 1500,
-        showConfirmButton: false
-      });
-    }
-
-    // ========= SEGURIDAD =========
-    const passNueva = document.getElementById("passNueva");
-    const passConfirm = document.getElementById("passConfirm");
-    const strengthBar = document.getElementById("strengthBar");
-    const msgPass = document.getElementById("msgPass");
-
-    function evaluarFuerza(pass) {
-      const regexMayus = /[A-Z]/;
-      const regexNum = /[0-9]/;
-
-      let fuerza = 0;
-      if (pass.length >= 8) fuerza++;
-      if (regexMayus.test(pass)) fuerza++;
-      if (regexNum.test(pass)) fuerza++;
-
-      strengthBar.className = "password-strength";
-
-      if (!pass) {
-        msgPass.textContent = "Debe tener mínimo 8 caracteres, una mayúscula y un número 😊";
-        msgPass.style.color = "#6c757d";
-        return;
-      }
-
-      if (fuerza === 1) {
-        strengthBar.classList.add("strength-weak");
-        msgPass.textContent = "Muy débil — agrega número y mayúscula";
-        msgPass.style.color = "#e74c3c";
-      } else if (fuerza === 2) {
-        strengthBar.classList.add("strength-medium");
-        msgPass.textContent = "Casi lista — refuérzala un poco más";
-        msgPass.style.color = "#f39c12";
-      } else if (fuerza === 3) {
-        strengthBar.classList.add("strength-strong");
-        msgPass.textContent = "¡Contraseña segura! 😄";
-        msgPass.style.color = "#27ae60";
-      }
-    }
-
-    passNueva.addEventListener("input", () => {
-      evaluarFuerza(passNueva.value);
-    });
-
-    function cambiarPass(e) {
-      e.preventDefault();
-
-      if (passNueva.value !== passConfirm.value) {
-        return Swal.fire({
-          icon: "error",
-          title: "Las contraseñas no coinciden"
-        });
-      }
-
-      if (!strengthBar.classList.contains("strength-strong")) {
-        return Swal.fire({
-          icon: "warning",
-          title: "Contraseña no cumple los requisitos",
-          text: "Revisa el mensaje de seguridad"
-        });
-      }
-
-      Swal.fire({
-        icon: "success",
-        title: "Contraseña actualizada",
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      document.getElementById("passwordForm").reset();
-      strengthBar.className = "password-strength";
-      msgPass.textContent = "Debe tener mínimo 8 caracteres, una mayúscula y un número 😊";
-      msgPass.style.color = "#6c757d";
-    }
-  </script>
-
+  <script type="module" src="/src/js/ajustes.js"></script>
 </body>
 </html>

@@ -13,28 +13,31 @@ const API_PREFIX = "/api/api";
 // -------------------- Helpers de tokens -------------------- //
 
 function getAccessToken() {
-  return localStorage.getItem("accessToken");
+  // AHORA usa las mismas keys que login.js
+  return localStorage.getItem("access");
 }
 
 function getRefreshToken() {
-  return localStorage.getItem("refreshToken");
+  return localStorage.getItem("refresh");
 }
 
 function setTokens({ access, refresh }) {
-  if (access) localStorage.setItem("accessToken", access);
-  if (refresh) localStorage.setItem("refreshToken", refresh);
+  if (access) localStorage.setItem("access", access);
+  if (refresh) localStorage.setItem("refresh", refresh);
 }
 
 function clearTokens() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
   localStorage.removeItem("userLogin");
+  localStorage.removeItem("username");
+  localStorage.removeItem("is_staff");
 }
 
 function forceLogout() {
   clearTokens();
-  // Ajusta esta ruta según dónde tengas el login
-  window.location.href = "/paginas/login/login.html";
+  // Ruta real de tu login
+  window.location.href = "/login.html";
 }
 
 // -------------------- Refresh de token -------------------- //
@@ -54,7 +57,7 @@ async function tryRefreshToken() {
 
     const data = await res.json();
     if (data.access) {
-      localStorage.setItem("accessToken", data.access);
+      localStorage.setItem("access", data.access);
       return true;
     }
     return false;
@@ -164,6 +167,7 @@ async function apiDelete(resource, options = {}) {
 }
 
 // -------------------- Login (sin JWT previo) -------------------- //
+// (Opcional, por si en algún lado quisieras loguear con esta API en vez de login.js)
 
 async function login(username, password) {
   const res = await fetch(`${API_BASE_URL}/api/auth/token/`, {

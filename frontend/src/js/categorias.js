@@ -1,5 +1,5 @@
 // src/js/categorias.js
-// CRUD de Categorías usando la API Django + JWT
+// CRUD de Categorías usando la API Django + JWT + imagen opcional
 
 import { API } from "/src/js/api.js";
 
@@ -13,10 +13,31 @@ function getParam(name) {
 }
 
 function normalizarRespuestaLista(res) {
-  // Soporta lista simple o paginada (results)
   if (Array.isArray(res)) return res;
   if (res && Array.isArray(res.results)) return res.results;
   return [];
+}
+
+// Construye URL de imagen de categoría
+function getCategoriaImagen(cat) {
+  const img =
+    cat.imagen_absoluta ||
+    cat.imagen_url ||
+    cat.imagen ||
+    "";
+
+  if (!img) {
+    return "/src/img/categoria-default.png";
+  }
+
+  // Si el backend ya entrega URL absoluta, usarla tal cual
+  if (img.startsWith("http://") || img.startsWith("https://")) {
+    return img;
+  }
+
+  // Si entrega un path tipo "/media/xxx", intenta usarlo directo
+  // En producción, lo normal es que /media/ apunte al backend por nginx
+  return img;
 }
 
 // ----------------------------
@@ -85,8 +106,6 @@ function aplicarFiltrosCategorias() {
 
   const filtradas = categoriasCache.filter(cat => {
     const nombre = (cat.nombre || "").toLowerCase();
-
-    // "Tipo" no existe en backend, usamos el nombre como tipo visual
     const tipoVisual = (cat.nombre || "").toLowerCase();
 
     const coincideTexto =
@@ -118,12 +137,13 @@ function renderCategorias(lista) {
     card.className = "col-md-4";
 
     const nombre = cat.nombre || "Sin nombre";
-    const tipoVisual = nombre; // para mostrar debajo
-    const imagen = "/src/img/categoria-default.png"; // decorativo en front
+    const tipoVisual = nombre;
+    const imagen = getCategoriaImagen(cat);
 
     card.innerHTML = `
       <div class="card shadow-sm p-3 category-card h-100">
         <img src="${imagen}" 
+             alt="Imagen de ${nombre}"
              class="img-fluid rounded mb-3 w-100" 
              style="height:160px;object-fit:cover;">
 
@@ -156,18 +176,22 @@ function initAgregarCategoria() {
     e.preventDefault();
 
     const nombre = document.getElementById("nombre")?.value.trim();
-    // imagen es solo decorativa por ahora
-    // const imagen = document.getElementById("imagen")?.value.trim();
+    const inputImagen = document.getElementById("imagen");
+    const archivo = inputImagen?.files?.[0] || null;
 
     if (!nombre) {
       alert("El nombre de la categoría es obligatorio.");
       return;
     }
 
-    const payload = { nombre };
+    const formData = new FormData();
+    formData.append("nombre", nombre);
+    if (archivo) {
+      formData.append("imagen", archivo);
+    }
 
     try {
-      await API.post("categorias/", payload);
+      await API.post("categorias/", formData);
       alert("Categoría creada correctamente.");
       window.location.href = "listar.html";
     } catch (err) {
@@ -196,16 +220,23 @@ function initEditarCategoria() {
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const nombre = document.getElementById("nombre")?.value.trim();
+    const inputImagen = document.getElementById("imagen");
+    const archivo = inputImagen?.files?.[0] || null;
 
     if (!nombre) {
       alert("El nombre de la categoría es obligatorio.");
       return;
     }
 
-    const payload = { nombre };
+    const formData = new FormData();
+    formData.append("nombre", nombre);
+    // Si el usuario subió una nueva imagen, se envía.
+    if (archivo) {
+      formData.append("imagen", archivo);
+    }
 
     try {
-      await API.put(`categorias/${id}/`, payload);
+      await API.patch(`categorias/${id}/`, formData);
       alert("Categoría actualizada correctamente.");
       window.location.href = "listar.html";
     } catch (err) {
@@ -221,12 +252,14 @@ async function cargarDatosCategoriaEdicion(id) {
 
     const inputNombre = document.getElementById("nombre");
     const inputId = document.getElementById("idCategoria");
-    const inputImagen = document.getElementById("imagen");
+    const imgPreview = document.getElementById("imagenPreview");
 
     if (inputId) inputId.value = cat.id;
     if (inputNombre) inputNombre.value = cat.nombre || "";
-    // imagen sigue siendo decorativa
-    if (inputImagen) inputImagen.value = "";
+
+    if (imgPreview) {
+      imgPreview.src = getCategoriaImagen(cat);
+    }
   } catch (err) {
     console.error("Error al cargar categoría:", err);
     alert("No se pudo cargar la categoría.");

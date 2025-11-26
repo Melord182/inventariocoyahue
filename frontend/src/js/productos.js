@@ -245,9 +245,6 @@ function renderTablaProductos(lista) {
       <td>${p.documento_factura || "—"}</td>
       <td>${garantiaTexto}</td>
       <td>${estadoTexto}</td>
-      <td>
-        <img src="${qrUrl}" alt="QR" style="width:40px;height:40px;object-fit:contain;">
-      </td>
       <td class="d-flex gap-1">
         <a href="detalle.html?id=${p.id}" class="btn btn-sm btn-primary">
           <i class="bi bi-eye"></i>
@@ -311,13 +308,14 @@ const garantiaTexto =
         <p class="small mb-1"><strong>Estado:</strong> ${estadoTexto}</p>
         <p class="small mb-1"><strong>Garantía:</strong> ${p.garantia_meses} meses</p>
 
-        <img src="${qrUrl}" alt="QR" class="mt-2 mb-2" style="width:100px;height:100px;object-fit:contain;">
-        <div class="d-flex justify-content-center gap-2">
+     
           <a href="detalle.html?id=${p.id}" class="btn btn-sm btn-primary">
             <i class="bi bi-eye"></i>
           </a>
           <a href="editar.html?id=${p.id}" class="btn btn-sm btn-warning">
             <i class="bi bi-pencil"></i>
+          <a href="eliminar.html?id=${p.id}" class="btn btn-sm btn-danger">
+            <i class="bi bi-trash"></i>
           </a>
         </div>
       </div>
@@ -335,6 +333,10 @@ function initDetalle() {
   const id = getParam("id");
   if (!id) return;
   cargarDetalleProducto(id);
+  const btnImprimir = document.getElementById("btn-imprimir-qr");
+  if (btnImprimir) {
+    btnImprimir.addEventListener("click", imprimirQRProducto);
+  }
 }
 // Helpers para leer nombres de campos que pueden venir como string u objeto
 function getNombreCampo(campo, fallback = "—") {
@@ -352,6 +354,65 @@ function getNombreCampo(campo, fallback = "—") {
   return campo;
 }
 
+   function imprimirQRProducto() {
+  const qrImg = document.getElementById("qr-img");
+  if (!qrImg || !qrImg.src) {
+    alert("No hay código QR disponible para este producto.");
+    return;
+  }
+
+  const nombre = document.getElementById("nombreProd")?.textContent || "";
+  const codigo = document.getElementById("codigoProd")?.textContent || "";
+
+  // Abrimos una ventana nueva solo con el QR y datos básicos
+  const win = window.open("", "_blank", "width=400,height=600");
+  if (!win) {
+    alert("No se pudo abrir la ventana de impresión (revisa el bloqueador de pop-ups).");
+    return;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>QR ${codigo}</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          text-align: center;
+          margin: 0;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 18px;
+          margin: 0 0 4px 0;
+        }
+        h2 {
+          font-size: 14px;
+          margin: 0 0 16px 0;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${nombre}</h1>
+      <h2>${codigo}</h2>
+      <img src="${qrImg.src}" alt="QR ${codigo}">
+      <script>
+        window.onload = function() {
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
 async function cargarDetalleProducto(id) {
   try {
     const p = await API.get(`productos/${id}/`); // GET /api/api/productos/<id>/
@@ -367,7 +428,6 @@ async function cargarDetalleProducto(id) {
     const elFactura = document.getElementById("facturaProd");
     const elComponentes = document.getElementById("componentesProd");
     const elHistorial = document.getElementById("historialProd");
-    const elImg = document.getElementById("imgProducto");
     const elBtnEditar = document.getElementById("btnEditar");
 
     // Nombre principal (modelo + nro_serie si existen, si no, cae en nro_serie)
@@ -423,25 +483,26 @@ async function cargarDetalleProducto(id) {
       }
     }
 
-    // Imagen: de momento no viene desde backend
-    if (elImg) {
-      elImg.src = "/src/img/no-image.png";
+    // Mostrar QR generado por Django
+    const qrImg = document.getElementById("qr-img");
+    if (qrImg && p.codigo_qr) {
+    // Intenta primero imagen_qr_url, luego imagen_qr
+    const qrUrl = p.codigo_qr.imagen_qr_url || p.codigo_qr.imagen_qr;
+    
+    if (qrUrl) {
+        // Si la URL es relativa, agregar el backend base URL
+        if (qrUrl.startsWith('/media/')) {
+            qrImg.src = `http://127.0.0.1:8000${qrUrl}`;
+        } else {
+            qrImg.src = qrUrl;
+        }
+        
+        // Debug
+        console.log('URL del QR:', qrImg.src);
+    } else {
+        console.log('No hay imagen QR disponible para este producto');
     }
-
-    // QR generado en frontend si quieres
-    const qrDiv = document.getElementById("qrDetalle");
-    if (qrDiv && window.QRCode) {
-      qrDiv.innerHTML = "";
-      new QRCode(qrDiv, {
-        text: `PRODUCTO:${p.id}|SERIE:${p.nro_serie}`,
-        width: 180,
-        height: 180,
-      });
-    }
-
-    if (elBtnEditar) {
-      elBtnEditar.href = `editar.html?id=${p.id}`;
-    }
+}
   } catch (err) {
     console.error("Error al cargar detalle:", err);
     alert("No se pudo cargar el producto.");
