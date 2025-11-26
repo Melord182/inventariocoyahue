@@ -245,9 +245,6 @@ function renderTablaProductos(lista) {
       <td>${p.documento_factura || "—"}</td>
       <td>${garantiaTexto}</td>
       <td>${estadoTexto}</td>
-      <td>
-        <img src="${qrUrl}" alt="QR" style="width:40px;height:40px;object-fit:contain;">
-      </td>
       <td class="d-flex gap-1">
         <a href="detalle.html?id=${p.id}" class="btn btn-sm btn-primary">
           <i class="bi bi-eye"></i>
@@ -367,7 +364,6 @@ async function cargarDetalleProducto(id) {
     const elFactura = document.getElementById("facturaProd");
     const elComponentes = document.getElementById("componentesProd");
     const elHistorial = document.getElementById("historialProd");
-    const elImg = document.getElementById("imgProducto");
     const elBtnEditar = document.getElementById("btnEditar");
 
     // Nombre principal (modelo + nro_serie si existen, si no, cae en nro_serie)
@@ -423,25 +419,27 @@ async function cargarDetalleProducto(id) {
       }
     }
 
-    // Imagen: de momento no viene desde backend
-    if (elImg) {
-      elImg.src = "/src/img/no-image.png";
+   
+    // Mostrar QR generado por Django
+    const qrImg = document.getElementById("qr-img");
+    if (qrImg && p.codigo_qr) {
+    // Intenta primero imagen_qr_url, luego imagen_qr
+    const qrUrl = p.codigo_qr.imagen_qr_url || p.codigo_qr.imagen_qr;
+    
+    if (qrUrl) {
+        // Si la URL es relativa, agregar el backend base URL
+        if (qrUrl.startsWith('/media/')) {
+            qrImg.src = `http://127.0.0.1:8000${qrUrl}`;
+        } else {
+            qrImg.src = qrUrl;
+        }
+        
+        // Debug
+        console.log('URL del QR:', qrImg.src);
+    } else {
+        console.log('No hay imagen QR disponible para este producto');
     }
-
-    // QR generado en frontend si quieres
-    const qrDiv = document.getElementById("qrDetalle");
-    if (qrDiv && window.QRCode) {
-      qrDiv.innerHTML = "";
-      new QRCode(qrDiv, {
-        text: `PRODUCTO:${p.id}|SERIE:${p.nro_serie}`,
-        width: 180,
-        height: 180,
-      });
-    }
-
-    if (elBtnEditar) {
-      elBtnEditar.href = `editar.html?id=${p.id}`;
-    }
+}
   } catch (err) {
     console.error("Error al cargar detalle:", err);
     alert("No se pudo cargar el producto.");

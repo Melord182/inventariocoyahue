@@ -60,9 +60,19 @@ class SucursalSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CodigoQRSerializer(serializers.ModelSerializer):
+    imagen_qr_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = CodigoQR
-        fields = '__all__'
+        fields = ['id', 'imagen_qr', 'imagen_qr_url']
+    
+    def get_imagen_qr_url(self, obj):
+        if obj.imagen_qr:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.imagen_qr.url)
+            return obj.imagen_qr.url
+        return None
 
 # ============= SERIALIZERS DE USUARIOS =============
 
@@ -125,7 +135,7 @@ class ProductosListSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     estado_nombre = serializers.CharField(source='estado.nombre', read_only=True)
     sucursal = SucursalSerializer(read_only=True)
-    codigo_qr = CodigoQRSerializer(source='qr', read_only=True)  
+    codigo_qr = CodigoQRSerializer(read_only=True)  
     class Meta:
         model = Productos
         fields = [
@@ -149,7 +159,7 @@ class ProductosDetailSerializer(serializers.ModelSerializer):
     sucursal = SucursalSerializer(read_only=True)
 
     # QR asociado al producto (OneToOne: related_name='qr')
-    codigo_qr = CodigoQRSerializer(source="qr", read_only=True)
+    codigo_qr = CodigoQRSerializer(read_only=True)
 
     # Datos relacionados
     asignaciones = serializers.SerializerMethodField()
