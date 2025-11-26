@@ -3,6 +3,7 @@
 
 import { API } from "/src/js/api.js";
 
+console.log("JS de notificaciones cargado correctamente");
 let notificaciones = [];
 
 // Normaliza respuesta (lista simple o paginada)
@@ -12,23 +13,25 @@ function normalizarLista(res) {
   return [];
 }
 
-// ¿Está leída?
+// ¿Está leída? - CORRECCIÓN: usar 'leido' sin tilde
 function estaLeida(n) {
-  if (typeof n.leida === "boolean") return n.leida;
+  if (typeof n.leido === "boolean") return n.leido;
+  if (typeof n.leida === "boolean") return n.leida; // compatibilidad
   if (typeof n.nueva === "boolean") return !n.nueva; // compatibilidad
   return false;
 }
 
 // Tipo (stock/proveedor/sistema) para filtros y badge
 function getTipo(n) {
-  return n.tipo || n.categoria || "sistema";
+  return n.categoria || n.tipo || "sistema";
 }
 
 // Texto de tiempo / fecha
 function formatearTiempo(n) {
+  if (n.tiempo_transcurrido) return n.tiempo_transcurrido; // desde serializer
   if (n.tiempo) return n.tiempo; // compat con versión antigua
 
-  const fechaStr = n.fecha || n.fecha_creacion || n.created_at;
+  const fechaStr = n.fecha_creacion || n.fecha || n.created_at;
   if (!fechaStr) return "";
 
   const fecha = new Date(fechaStr);
@@ -46,11 +49,39 @@ function formatearTiempo(n) {
   return `Hace ${diffDias} días`;
 }
 
+// Obtener notificaciones no leídas
+async function obtenerNotificacionesNoLeidas() {
+  try {
+    // Usar el endpoint del ViewSet (con guion bajo)
+    const data = await API.get('notificaciones/no_leidas/');
+    console.log(`Tienes ${data.count} notificaciones nuevas`);
+    actualizarBadgeConConteo(data.count);
+    return data;
+  } catch (error) {
+    console.error('Error al obtener notificaciones no leídas:', error);
+    // En caso de error, actualizar badge con las notificaciones locales
+    actualizarBadge();
+    return { count: 0, notificaciones: [] };
+  }
+}
+
+// Función auxiliar para actualizar badge con conteo específico
+function actualizarBadgeConConteo(count) {
+  const badge = document.getElementById("badgeNoti");
+  if (!badge) return;
+
+  badge.innerText = count;
+  badge.style.display = count > 0 ? "block" : "none";
+}
+
 // ---------------- Carga principal ----------------
 
 async function fetchNotificaciones() {
   const res = await API.get("notificaciones/");
   notificaciones = normalizarLista(res);
+  
+  // Actualizar badge después de cargar
+  actualizarBadge();
 }
 
 async function cargarNotificaciones(filtro = "todas") {
@@ -89,6 +120,8 @@ async function cargarNotificaciones(filtro = "todas") {
           ? "danger"
           : tipo === "proveedor"
           ? "warning"
+          : tipo === "mantenimiento"
+          ? "primary"
           : "info";
 
       const fondo = estaLeida(n) ? "var(--card-bg)" : "#eaf4ff";
@@ -96,11 +129,12 @@ async function cargarNotificaciones(filtro = "todas") {
 
       lista.innerHTML += `
         <div class="noti-item p-3"
-          style="background:${fondo};cursor:pointer;"
+          style="background:${fondo};cursor:pointer;border-radius:8px;margin-bottom:8px;"
           data-id="${n.id}">
           <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <span class="fw-semibold">${n.mensaje || n.titulo || "(Sin mensaje)"}</span><br>
+            <div style="flex:1;">
+              <span class="fw-semibold">${n.titulo || n.mensaje || "(Sin mensaje)"}</span><br>
+              ${n.titulo && n.mensaje ? `<small class="text-secondary">${n.mensaje}</small><br>` : ''}
               <small class="text-muted">${tiempo}</small>
             </div>
             <span class="badge bg-${color}">
@@ -135,33 +169,37 @@ async function abrirDetalle(id) {
   const noti = notificaciones.find(n => n.id === id);
   if (!noti) return;
 
-  // marcar como leída en backend
+  // Marcar como leída usando el ViewSet
   try {
     await API.post(`notificaciones/${id}/marcar_leida/`, {});
+    console.log(`Notificación ${id} marcada como leída`);
   } catch (e) {
-    console.warn("No se pudo marcar como leída en API (se ignora):", e);
+    console.warn("Error al marcar como leída:", e);
   }
 
-  // refrescamos lista local
+  // Refrescar lista local
   try {
     await fetchNotificaciones();
   } catch (e) {
-    console.warn("Error al refrescar notificaciones luego de marcar leída:", e);
+    console.warn("Error al refrescar notificaciones:", e);
   }
 
-  // texto en modal
+  // Texto en modal
   const mensajeEl = document.getElementById("modalNotiMensaje");
   const tiempoEl = document.getElementById("modalNotiTiempo");
 
-  if (mensajeEl) mensajeEl.innerText = noti.mensaje || noti.titulo || "(Sin mensaje)";
+  if (mensajeEl) {
+    const titulo = noti.titulo ? `<strong>${noti.titulo}</strong><br>` : '';
+    mensajeEl.innerHTML = titulo + (noti.mensaje || "(Sin mensaje)");
+  }
   if (tiempoEl) tiempoEl.innerText = `📅 ${formatearTiempo(noti)}`;
 
-  // re-render lista con filtro actual
+  // Re-render lista con filtro actual
   const btnActivo = document.querySelector(".filtro-noti.active");
   const filtroActual = btnActivo?.dataset?.filtro || "todas";
   cargarNotificaciones(filtroActual);
 
-  // abrir modal
+  // Abrir modal
   const modalEl = document.getElementById("modalNotificacion");
   if (modalEl && window.bootstrap) {
     const modal = new bootstrap.Modal(modalEl);
@@ -220,10 +258,34 @@ function configurarMarcarLeidas() {
   });
 }
 
+// ---------------- Función para obtener conteo rápido de no leídas ----------------
+async function obtenerConteoRapidoNoLeidas() {
+  try {
+    const data = await API.get('notificaciones/no_leidas/');
+    console.log(`Tienes ${data.count} notificaciones nuevas`);
+    actualizarBadgeConConteo(data.count);
+    return data.count;
+  } catch (error) {
+    console.error('Error al obtener conteo de no leídas:', error);
+    return 0;
+  }
+}
+
 // ---------------- Inicializar ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
   configurarFiltros();
   configurarMarcarLeidas();
   cargarNotificaciones("todas");
+  
+  // Opcional: Obtener notificaciones no leídas periódicamente
+  setInterval(obtenerConteoRapidoNoLeidas, 30000); // Cada 30 segundos
 });
+
+// Exportar funciones para uso externo
+export {
+  obtenerNotificacionesNoLeidas,
+  obtenerConteoRapidoNoLeidas,
+  cargarNotificaciones,
+  actualizarBadge
+};

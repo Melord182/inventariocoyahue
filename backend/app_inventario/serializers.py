@@ -301,7 +301,7 @@ class ProductosCreateUpdateSerializer(serializers.ModelSerializer):
 # ============= SERIALIZERS DE ASIGNACIONES =============
 
 class AsignacionesSerializer(serializers.ModelSerializer):
-    """Serializer para Asignaciones"""
+    """Serializer para LISTAR asignaciones"""
     producto_info = serializers.SerializerMethodField()
     usuario_nombre = serializers.SerializerMethodField()
     estado_asignacion = serializers.SerializerMethodField()
@@ -316,43 +316,7 @@ class AsignacionesSerializer(serializers.ModelSerializer):
         ]
     
     def get_producto_info(self, obj):
-        return f"{obj.producto.categoria.nombre} - {obj.producto.nro_serie}"
-    
-    def get_usuario_nombre(self, obj):
-        return obj.usuario.user.get_full_name()
-    
-    def get_estado_asignacion(self, obj):
-        return "Activa" if not obj.fecha_devolucion else "Devuelta"
-
-
-class AsignacionesSerializer(serializers.ModelSerializer):
-    usuario_nombre = serializers.SerializerMethodField()
-    producto_info = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Asignaciones
-        fields = [
-            "id",
-            "usuario",
-            "usuario_nombre",
-            "producto",
-            "producto_info",
-            "fecha_asignacion",
-            "fecha_devolucion",
-        ]
-
-    def get_usuario_nombre(self, obj):
-        """
-        Evita reventar si por alguna razón falta el user de Django.
-        """
-        usuario = getattr(obj, "usuario", None)
-        user = getattr(usuario, "user", None) if usuario else None
-        if user:
-            nombre = user.get_full_name()
-            return nombre or user.username
-        return ""
-
-    def get_producto_info(self, obj):
+        """Obtiene información del producto con manejo de errores"""
         producto = getattr(obj, "producto", None)
         if not producto:
             return {}
@@ -363,6 +327,44 @@ class AsignacionesSerializer(serializers.ModelSerializer):
             "categoria": getattr(categoria, "nombre", "") if categoria else "",
             "modelo": str(getattr(producto, "modelo", "")),
         }
+    
+    def get_usuario_nombre(self, obj):
+        """Obtiene nombre del usuario con manejo de errores"""
+        usuario = getattr(obj, "usuario", None)
+        user = getattr(usuario, "user", None) if usuario else None
+        if user:
+            nombre = user.get_full_name()
+            return nombre or user.username
+        return ""
+    
+    def get_estado_asignacion(self, obj):
+        return "Activa" if not obj.fecha_devolucion else "Devuelta"
+
+
+class AsignacionesCreateSerializer(serializers.ModelSerializer):
+    """Serializer específico para CREAR asignaciones"""
+    
+    class Meta:
+        model = Asignaciones
+        fields = [
+            'producto', 
+            'usuario',
+            'fecha_devolucion'  # Opcional al crear
+        ]
+    
+    def create(self, validated_data):
+        """
+        Crear una nueva asignación
+        """
+        # El campo fecha_asignacion se asignará automáticamente por auto_now_add=True
+        asignacion = Asignaciones.objects.create(**validated_data)
+        
+        # Aquí podrías agregar lógica adicional como:
+        # - Cambiar el estado del producto a "Asignado"
+        # - Crear una notificación
+        # - Registrar en el historial
+        
+        return asignacion
 
 # ============= SERIALIZERS DE MANTENCIONES =============
 
@@ -450,18 +452,33 @@ class DocumentacionesSerializer(serializers.ModelSerializer):
 
 
 # ============= SERIALIZERS DE NOTIFICACIONES =============
-
 class NotificacionesSerializer(serializers.ModelSerializer):
-    """Serializer para Notificaciones"""
-    producto_nro_serie = serializers.CharField(source='producto.nro_serie', read_only=True)
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    tiempo_transcurrido = serializers.SerializerMethodField()
     
     class Meta:
         model = Notificaciones
         fields = [
-            'id', 'producto', 'producto_nro_serie',
-            'mensaje', 'fecha', 'hora', 'leido'
+            'id', 'categoria', 'titulo', 'mensaje', 
+            'producto', 'producto_nombre', 'fecha_creacion',
+            'leido', 'prioridad', 'url_accion', 'tiempo_transcurrido'
         ]
-        read_only_fields = ['fecha', 'hora']
+        read_only_fields = ['id', 'fecha_creacion']
+    
+    def get_tiempo_transcurrido(self, obj):
+        from django.utils import timezone
+        delta = timezone.now() - obj.fecha_creacion
+        
+        if delta.days > 0:
+            return f"hace {delta.days} día{'s' if delta.days > 1 else ''}"
+        elif delta.seconds // 3600 > 0:
+            horas = delta.seconds // 3600
+            return f"hace {horas} hora{'s' if horas > 1 else ''}"
+        elif delta.seconds // 60 > 0:
+            minutos = delta.seconds // 60
+            return f"hace {minutos} minuto{'s' if minutos > 1 else ''}"
+        else:
+            return "hace unos segundos"
 
 
 # ============= SERIALIZERS DE LOG ACCESO =============

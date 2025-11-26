@@ -1,10 +1,13 @@
 from datetime import date
-
+from rest_framework.filters import OrderingFilter, SearchFilter
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import models 
+from .services import NotificacionService
+from django.contrib.auth.decorators import login_required
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, filters
@@ -25,7 +28,7 @@ from .serializers import (
     ModelosSerializer, EstadosSerializer, SucursalSerializer, CodigoQRSerializer,
     ProductosListSerializer, ProductosDetailSerializer, ProductosCreateUpdateSerializer,
     UsuariosSerializer, UsuariosCreateSerializer,
-    AsignacionesSerializer,
+    AsignacionesSerializer, AsignacionesCreateSerializer,
     MantencionesSerializer,
     HistorialEstadosSerializer, HistorialEstadosCreateSerializer,
     DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer, UsuariosUpdateSerializer
@@ -253,6 +256,9 @@ class ProductosViewSet(viewsets.ModelViewSet):
                 {"error": "Este producto no tiene una asignación activa"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+
+    
 
 
 # ============= VIEWSET DE USUARIOS =============
@@ -509,44 +515,51 @@ class DocumentacionesViewSet(viewsets.ModelViewSet):
 
 
 class NotificacionesViewSet(viewsets.ModelViewSet):
-    """ViewSet para gestionar Notificaciones"""
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ["producto", "leido"]
-    ordering_fields = ["fecha", "hora"]
-    ordering = ["-fecha", "-hora"]
     serializer_class = NotificacionesSerializer
-
+    permission_classes = [IsAuthenticated]
+    
     def get_queryset(self):
-        return Notificaciones.objects.select_related("producto").all()
-
-    @action(detail=False, methods=["get"])
+        # Filtra notificaciones del usuario o globales
+        return Notificaciones.objects.filter(
+            models.Q(usuario=self.request.user) | models.Q(usuario__isnull=True)
+        )
+    
+    @action(detail=False, methods=['get'])
     def no_leidas(self, request):
-        """Retorna notificaciones no leídas"""
+        """Obtiene solo las notificaciones no leídas"""
         notificaciones = self.get_queryset().filter(leido=False)
         serializer = self.get_serializer(notificaciones, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["post"])
+        return Response({
+            'count': notificaciones.count(),
+            'notificaciones': serializer.data
+        })
+    
+    @action(detail=True, methods=['post'])
     def marcar_leida(self, request, pk=None):
         """Marca una notificación como leída"""
         notificacion = self.get_object()
-        notificacion.leido = True
-        notificacion.save()
-        return Response(
-            self.get_serializer(notificacion).data,
-            status=status.HTTP_200_OK,
-        )
-
-    @action(detail=False, methods=["post"])
+        notificacion.marcar_como_leida()
+        return Response({'status': 'notificación marcada como leída'})
+    
+    @action(detail=False, methods=['post'])
     def marcar_todas_leidas(self, request):
         """Marca todas las notificaciones como leídas"""
-        self.get_queryset().filter(leido=False).update(leido=True)
-        return Response(
-            {"mensaje": "Todas las notificaciones fueron marcadas como leídas"},
-            status=status.HTTP_200_OK,
-        )
-
+        from django.utils import timezone
+        notificaciones = self.get_queryset().filter(leido=False)
+        notificaciones.update(leido=True, fecha_lectura=timezone.now())
+        return Response({
+            'status': 'todas las notificaciones marcadas como leídas',
+            'count': notificaciones.count()
+        })
+    
+    @action(detail=False, methods=['delete'])
+    def limpiar_leidas(self, request):
+        """Elimina las notificaciones leídas"""
+        count = self.get_queryset().filter(leido=True).delete()[0]
+        return Response({
+            'status': 'notificaciones leídas eliminadas',
+            'count': count
+        })
 
 # ============= VIEWSET DE LOG DE ACCESOS =============
 
@@ -1047,15 +1060,24 @@ def estados_delete(request, pk):
     return render(request, "eliminar_estado.html", context)
 
 
+#============ VISTAS DE NOTIFICACIONES =============
+
+@login_required
 def notificaciones(request):
-    """Página de notificaciones del usuario"""
-    notificaciones_list = Notificaciones.objects.all().order_by("-fecha", "-hora")
+    """Página de notificaciones"""
+    # CORRECCIÓN: Usar fecha_creacion en lugar de fecha y hora
+    notificaciones_list = Notificaciones.objects.filter(
+        usuario=request.user
+    ) | Notificaciones.objects.filter(usuario__isnull=True)
+    
+    notificaciones_list = notificaciones_list.order_by("-fecha_creacion")
 
     paginator = Paginator(notificaciones_list, 10)
     page_number = request.GET.get("page")
     notificaciones_page = paginator.get_page(page_number)
 
     total_notificaciones = notificaciones_list.count()
+    # CORRECCIÓN: Usar 'leido' sin tilde
     notificaciones_no_leidas = notificaciones_list.filter(leido=False).count()
     notificaciones_leidas = total_notificaciones - notificaciones_no_leidas
 
@@ -1067,27 +1089,58 @@ def notificaciones(request):
     }
     return render(request, "notificaciones.html", context)
 
-
+@login_required
 def marcar_leida(request, pk):
     """Marcar una notificación como leída"""
     notificacion = get_object_or_404(Notificaciones, pk=pk)
-    notificacion.leido = True
-    notificacion.save()
-
+    # Usar el método del modelo
+    notificacion.marcar_como_leida()
+    
     messages.success(request, "Notificación marcada como leída.")
     return redirect("notificaciones")
 
-
+@login_required
 def marcar_todas_leidas(request):
     """Marcar todas las notificaciones como leídas"""
     if request.method == "POST":
-        Notificaciones.objects.filter(leido=False).update(leido=True)
+        from django.utils import timezone
+        # Filtrar por usuario
+        queryset = Notificaciones.objects.filter(
+            usuario=request.user, leido=False
+        ) | Notificaciones.objects.filter(
+            usuario__isnull=True, leido=False
+        )
+        queryset.update(leido=True, fecha_lectura=timezone.now())
+        
         messages.success(
             request, "Todas las notificaciones han sido marcadas como leídas."
         )
 
     return redirect("notificaciones")
 
+@login_required
+def no_leidas(request):
+    """Obtener conteo de notificaciones no leídas (para AJAX)"""
+    queryset = Notificaciones.objects.filter(
+        usuario=request.user, leido=False
+    ) | Notificaciones.objects.filter(
+        usuario__isnull=True, leido=False
+    )
+    
+    count = queryset.count()
+    
+    # Si quieren el listado completo, incluirlo
+    if request.GET.get('full') == 'true':
+        from .serializers import NotificacionesSerializer
+        serializer = NotificacionesSerializer(queryset, many=True)
+        return JsonResponse({
+            "count": count,
+            "notificaciones": serializer.data
+        })
+    
+    return JsonResponse({"count": count})
+
+#-----------------------------------------------------------------------
 
 def configuracion(request):
     """Página de configuración del sistema"""

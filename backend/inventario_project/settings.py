@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app_inventario.apps.AppConfig',
+    'app_inventario.apps.InventarioConfig',
     'rest_framework',
     'django_filters',
     'rest_framework_simplejwt',

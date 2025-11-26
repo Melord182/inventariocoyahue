@@ -18,3 +18,10 @@ admin.site.register(Notificaciones)
 admin.site.register(LogAcceso)
 admin.site.register(Sucursales)
 admin.site.register(CodigoQR)
+
+
+class NotificacionAdmin(admin.ModelAdmin):
+    list_display = ['titulo', 'categoria', 'producto', 'leido', 'prioridad', 'fecha_creacion']
+    list_filter = ['categoria', 'leido', 'prioridad', 'fecha_creacion']
+    search_fields = ['titulo', 'mensaje']
+    date_hierarchy = 'fecha_creacion'
