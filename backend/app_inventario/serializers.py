@@ -7,9 +7,18 @@ from .models import (
     Sucursales, CodigoQR
 )
 
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 # ============= SERIALIZERS BÁSICOS =============
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
 
+        # Campos extra en el payload:
+        token["username"] = user.username
+        token["is_staff"] = user.is_staff
+
+        return token
 class UserSerializer(serializers.ModelSerializer):
     """Serializer para el User de Django"""
     class Meta:
@@ -76,34 +85,52 @@ class CodigoQRSerializer(serializers.ModelSerializer):
 
 # ============= SERIALIZERS DE USUARIOS =============
 
+# ============= SERIALIZERS DE USUARIOS =============
+
 class UsuariosSerializer(serializers.ModelSerializer):
-    """Serializer para Usuarios"""
+    """
+    Serializer para LISTAR / VER usuarios.
+    Solo lectura de datos básicos (lo usas en list, retrieve, me).
+    """
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     nombre_completo = serializers.SerializerMethodField()
-    
+    is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
+
     class Meta:
         model = Usuarios
-        fields = ['id', 'user', 'username', 'email', 'nombre_completo', 'rol']
-        read_only_fields = ['id']
-    
+        fields = ['id', 'user', 'username', 'email', 'nombre_completo', 'rol', 'is_staff']
+        read_only_fields = ['id', 'user', 'username', 'email', 'nombre_completo', 'is_staff']
+
     def get_nombre_completo(self, obj):
         return obj.user.get_full_name()
 
 
 class UsuariosCreateSerializer(serializers.ModelSerializer):
-    """Serializer para crear usuarios (incluye creación del User)"""
+    """
+    Serializer para CREAR usuarios (incluye creación del User)
+    """
     username = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
     email = serializers.EmailField(write_only=True)
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
-    
+    is_staff = serializers.BooleanField(write_only=True, default=False)
+
     class Meta:
         model = Usuarios
-        fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name', 'rol']
+        fields = [
+            'id',
+            'username',
+            'password',
+            'email',
+            'first_name',
+            'last_name',
+            'rol',
+            'is_staff',
+        ]
         read_only_fields = ['id']
-    
+
     def create(self, validated_data):
         # Extraer datos del User
         username = validated_data.pop('username')
@@ -111,7 +138,8 @@ class UsuariosCreateSerializer(serializers.ModelSerializer):
         email = validated_data.pop('email')
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
-        
+        is_staff = validated_data.pop('is_staff', False)
+
         # Crear User de Django
         user = User.objects.create_user(
             username=username,
@@ -120,10 +148,61 @@ class UsuariosCreateSerializer(serializers.ModelSerializer):
             first_name=first_name,
             last_name=last_name
         )
-        
-        # Crear Usuario personalizado
+        user.is_staff = is_staff
+        user.save()
+
+        # Crear Usuario personalizado (perfil)
         usuario = Usuarios.objects.create(user=user, **validated_data)
         return usuario
+
+
+class UsuariosUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer para ACTUALIZAR usuarios existentes.
+    Permite cambiar nombre, email, is_staff y contraseña.
+    """
+    email = serializers.EmailField(source='user.email', required=False)
+    first_name = serializers.CharField(source='user.first_name', required=False)
+    last_name = serializers.CharField(source='user.last_name', required=False)
+    is_staff = serializers.BooleanField(source='user.is_staff', required=False)
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        style={'input_type': 'password'}
+    )
+
+    class Meta:
+        model = Usuarios
+        fields = [
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'rol',
+            'is_staff',
+            'password',
+        ]
+        read_only_fields = ['id']
+
+    def update(self, instance, validated_data):
+        # Datos anidados del User
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+
+        # Actualizar campos del User
+        for attr in ['email', 'first_name', 'last_name', 'is_staff']:
+            if attr in user_data:
+                setattr(user, attr, user_data[attr])
+
+        # Cambiar contraseña si viene
+        password = validated_data.pop('password', None)
+        if password:
+            user.set_password(password)
+
+        user.save()
+
+        # Actualizar campos del modelo Usuarios (ej: rol)
+        return super().update(instance, validated_data)
 
 
 # ============= SERIALIZERS DE PRODUCTOS =============

@@ -308,13 +308,14 @@ const garantiaTexto =
         <p class="small mb-1"><strong>Estado:</strong> ${estadoTexto}</p>
         <p class="small mb-1"><strong>Garantía:</strong> ${p.garantia_meses} meses</p>
 
-        <img src="${qrUrl}" alt="QR" class="mt-2 mb-2" style="width:100px;height:100px;object-fit:contain;">
-        <div class="d-flex justify-content-center gap-2">
+     
           <a href="detalle.html?id=${p.id}" class="btn btn-sm btn-primary">
             <i class="bi bi-eye"></i>
           </a>
           <a href="editar.html?id=${p.id}" class="btn btn-sm btn-warning">
             <i class="bi bi-pencil"></i>
+          <a href="eliminar.html?id=${p.id}" class="btn btn-sm btn-danger">
+            <i class="bi bi-trash"></i>
           </a>
         </div>
       </div>
@@ -332,6 +333,10 @@ function initDetalle() {
   const id = getParam("id");
   if (!id) return;
   cargarDetalleProducto(id);
+  const btnImprimir = document.getElementById("btn-imprimir-qr");
+  if (btnImprimir) {
+    btnImprimir.addEventListener("click", imprimirQRProducto);
+  }
 }
 // Helpers para leer nombres de campos que pueden venir como string u objeto
 function getNombreCampo(campo, fallback = "—") {
@@ -347,6 +352,65 @@ function getNombreCampo(campo, fallback = "—") {
   }
   // Si es string o número directo
   return campo;
+}
+
+   function imprimirQRProducto() {
+  const qrImg = document.getElementById("qr-img");
+  if (!qrImg || !qrImg.src) {
+    alert("No hay código QR disponible para este producto.");
+    return;
+  }
+
+  const nombre = document.getElementById("nombreProd")?.textContent || "";
+  const codigo = document.getElementById("codigoProd")?.textContent || "";
+
+  // Abrimos una ventana nueva solo con el QR y datos básicos
+  const win = window.open("", "_blank", "width=400,height=600");
+  if (!win) {
+    alert("No se pudo abrir la ventana de impresión (revisa el bloqueador de pop-ups).");
+    return;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>QR ${codigo}</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          text-align: center;
+          margin: 0;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 18px;
+          margin: 0 0 4px 0;
+        }
+        h2 {
+          font-size: 14px;
+          margin: 0 0 16px 0;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${nombre}</h1>
+      <h2>${codigo}</h2>
+      <img src="${qrImg.src}" alt="QR ${codigo}">
+      <script>
+        window.onload = function() {
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 async function cargarDetalleProducto(id) {
@@ -419,7 +483,6 @@ async function cargarDetalleProducto(id) {
       }
     }
 
-   
     // Mostrar QR generado por Django
     const qrImg = document.getElementById("qr-img");
     if (qrImg && p.codigo_qr) {

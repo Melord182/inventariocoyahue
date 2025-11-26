@@ -266,6 +266,26 @@ function cargarActividad() {
 // =============================
 //  INICIALIZAR DASHBOARD
 // =============================
+
+function requireAdmin() {
+  const access = localStorage.getItem("access");
+  if (!access) {
+    // No hay sesión -> al login
+    window.location.href = "/login.html";
+    return false;
+  }
+
+  const isStaff = localStorage.getItem("is_staff") === "1";
+  if (!isStaff) {
+    // Logueado pero no es staff -> panel de usuario
+    window.location.href = "/paginas/usuario/panel.html";
+    return false;
+  }
+
+  return true;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  if (!requireAdmin()) return;
   cargarDatosDashboard();
 });

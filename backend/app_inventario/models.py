@@ -35,8 +35,7 @@ class Marcas(models.Model):
 class Categorias(models.Model):
     """Categorías de productos (Computadores, Impresoras, Tablets, etc.)"""
     nombre = models.CharField(max_length=100, unique=True)
-    descripcion = models.TextField(blank=True, null=True)
-
+    imagen =models.ImageField(upload_to='categorias/', blank=True, null=True)
     class Meta:
         verbose_name_plural = "Categorías"
 

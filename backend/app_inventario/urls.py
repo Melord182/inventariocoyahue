@@ -37,6 +37,7 @@ from .views import (
     LogAccesoViewSet,
     SucursalViewSet,
     CodigoQRViewSet,
+
 )
 
 # Crear el router
@@ -99,6 +100,7 @@ urlpatterns = [
 
     #   CONFIGURACION
     path('configuracion/', views.configuracion, name='configuracion'),
+
 
     # ============= ENDPOINTS AJAX =============
     path('get-modelos-by-marca/', views.get_modelos_by_marca, name='get_modelos_by_marca'),

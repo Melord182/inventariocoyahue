@@ -165,21 +165,14 @@ class ProveedorFilterForm(forms.Form):
         })
     )
 
-
 class CategoriasForm(forms.ModelForm):
-    """Formulario para crear/editar categorías"""
-    
     class Meta:
         model = Categorias
-        fields = ['nombre', 'descripcion']
+        fields = ["nombre", "imagen"]
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3
-            }),
+            "nombre": forms.TextInput(attrs={"class": "form-control"}),
+            "imagen": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
-
 
 class CategoriasFilterForm(forms.Form):
     """Formulario para filtrar categorías"""
