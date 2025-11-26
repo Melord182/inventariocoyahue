@@ -1,0 +1,279 @@
+// src/js/categorias.js
+// CRUD de Categorías usando la API Django + JWT
+
+import { API } from "/src/js/api.js";
+
+let categoriasCache = [];
+
+// ----------------------------
+// Helpers
+// ----------------------------
+function getParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function normalizarRespuestaLista(res) {
+  // Soporta lista simple o paginada (results)
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.results)) return res.results;
+  return [];
+}
+
+// ----------------------------
+// Detectar página
+// ----------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  const path = window.location.pathname;
+
+  if (path.endsWith("listar.html")) {
+    initListarCategorias();
+  } else if (path.endsWith("agregar.html")) {
+    initAgregarCategoria();
+  } else if (path.endsWith("editar.html")) {
+    initEditarCategoria();
+  } else if (path.endsWith("eliminar.html")) {
+    initEliminarCategoria();
+  }
+});
+
+// ============================================================
+// LISTAR (listar.html)
+// ============================================================
+function initListarCategorias() {
+  cargarCategoriasLista();
+
+  const inputNombre = document.getElementById("filtroNombre");
+  const selectTipo = document.getElementById("filtroTipo");
+  const btnLimpiar = document.getElementById("btnLimpiarFiltros");
+
+  const aplicar = () => aplicarFiltrosCategorias();
+
+  if (inputNombre) inputNombre.addEventListener("input", aplicar);
+  if (selectTipo) selectTipo.addEventListener("change", aplicar);
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener("click", () => {
+      if (inputNombre) inputNombre.value = "";
+      if (selectTipo) selectTipo.value = "";
+      aplicarFiltrosCategorias();
+    });
+  }
+}
+
+async function cargarCategoriasLista() {
+  const contenedor = document.getElementById("lista-categorias");
+  if (contenedor) {
+    contenedor.innerHTML = `<p class="text-muted">Cargando categorías...</p>`;
+  }
+
+  try {
+    const res = await API.get("categorias/"); // GET /api/api/categorias/
+    categoriasCache = normalizarRespuestaLista(res);
+    aplicarFiltrosCategorias();
+  } catch (err) {
+    console.error("Error al cargar categorías:", err);
+    if (contenedor) {
+      contenedor.innerHTML =
+        `<p class="text-danger">No se pudieron cargar las categorías.</p>`;
+    }
+  }
+}
+
+function aplicarFiltrosCategorias() {
+  const texto = (document.getElementById("filtroNombre")?.value || "")
+    .toLowerCase();
+  const tipo = document.getElementById("filtroTipo")?.value || "";
+
+  const filtradas = categoriasCache.filter(cat => {
+    const nombre = (cat.nombre || "").toLowerCase();
+
+    // "Tipo" no existe en backend, usamos el nombre como tipo visual
+    const tipoVisual = (cat.nombre || "").toLowerCase();
+
+    const coincideTexto =
+      !texto || nombre.includes(texto) || tipoVisual.includes(texto);
+
+    const coincideTipo =
+      !tipo || cat.nombre === tipo || tipoVisual === tipo.toLowerCase();
+
+    return coincideTexto && coincideTipo;
+  });
+
+  renderCategorias(filtradas);
+}
+
+function renderCategorias(lista) {
+  const contenedor = document.getElementById("lista-categorias");
+  if (!contenedor) return;
+
+  if (!lista.length) {
+    contenedor.innerHTML =
+      `<p class="text-muted">No hay categorías que coincidan con el filtro.</p>`;
+    return;
+  }
+
+  contenedor.innerHTML = "";
+
+  lista.forEach(cat => {
+    const card = document.createElement("div");
+    card.className = "col-md-4";
+
+    const nombre = cat.nombre || "Sin nombre";
+    const tipoVisual = nombre; // para mostrar debajo
+    const imagen = "/src/img/categoria-default.png"; // decorativo en front
+
+    card.innerHTML = `
+      <div class="card shadow-sm p-3 category-card h-100">
+        <img src="${imagen}" 
+             class="img-fluid rounded mb-3 w-100" 
+             style="height:160px;object-fit:cover;">
+
+        <h5 class="fw-bold">${nombre}</h5>
+        <p class="text-muted small">${tipoVisual}</p>
+
+        <div class="mt-3 d-flex gap-1">
+          <a href="editar.html?id=${cat.id}" class="btn btn-warning btn-sm">
+            <i class="bi bi-pencil-fill"></i>
+          </a>
+          <a href="eliminar.html?id=${cat.id}" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash-fill"></i>
+          </a>
+        </div>
+      </div>
+    `;
+
+    contenedor.appendChild(card);
+  });
+}
+
+// ============================================================
+// AGREGAR (agregar.html)
+// ============================================================
+function initAgregarCategoria() {
+  const form = document.getElementById("formAgregarCategoria");
+  if (!form) return;
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre")?.value.trim();
+    // imagen es solo decorativa por ahora
+    // const imagen = document.getElementById("imagen")?.value.trim();
+
+    if (!nombre) {
+      alert("El nombre de la categoría es obligatorio.");
+      return;
+    }
+
+    const payload = { nombre };
+
+    try {
+      await API.post("categorias/", payload);
+      alert("Categoría creada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al crear categoría:", err);
+      alert("No se pudo crear la categoría.");
+    }
+  });
+}
+
+// ============================================================
+// EDITAR (editar.html)
+// ============================================================
+function initEditarCategoria() {
+  const form = document.getElementById("formEditarCategoria");
+  if (!form) return;
+
+  const id = getParam("id");
+  if (!id) {
+    alert("Falta el ID de la categoría.");
+    window.location.href = "listar.html";
+    return;
+  }
+
+  cargarDatosCategoriaEdicion(id);
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const nombre = document.getElementById("nombre")?.value.trim();
+
+    if (!nombre) {
+      alert("El nombre de la categoría es obligatorio.");
+      return;
+    }
+
+    const payload = { nombre };
+
+    try {
+      await API.put(`categorias/${id}/`, payload);
+      alert("Categoría actualizada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al actualizar categoría:", err);
+      alert("No se pudo actualizar la categoría.");
+    }
+  });
+}
+
+async function cargarDatosCategoriaEdicion(id) {
+  try {
+    const cat = await API.get(`categorias/${id}/`);
+
+    const inputNombre = document.getElementById("nombre");
+    const inputId = document.getElementById("idCategoria");
+    const inputImagen = document.getElementById("imagen");
+
+    if (inputId) inputId.value = cat.id;
+    if (inputNombre) inputNombre.value = cat.nombre || "";
+    // imagen sigue siendo decorativa
+    if (inputImagen) inputImagen.value = "";
+  } catch (err) {
+    console.error("Error al cargar categoría:", err);
+    alert("No se pudo cargar la categoría.");
+  }
+}
+
+// ============================================================
+// ELIMINAR (eliminar.html)
+// ============================================================
+function initEliminarCategoria() {
+  const form = document.getElementById("formEliminarCategoria");
+  const infoDiv = document.getElementById("categoriaInfo");
+  if (!form || !infoDiv) return;
+
+  const id = getParam("id");
+  if (!id) {
+    alert("Falta el ID de la categoría.");
+    window.location.href = "listar.html";
+    return;
+  }
+
+  // Mostrar datos de la categoría
+  API.get(`categorias/${id}/`)
+    .then(cat => {
+      infoDiv.innerHTML = `
+        <strong>${cat.nombre || "Sin nombre"}</strong><br>
+        ID: ${cat.id}
+      `;
+      const hidden = document.getElementById("idCategoria");
+      if (hidden) hidden.value = cat.id;
+    })
+    .catch(err => {
+      console.error("Error al cargar categoría:", err);
+      infoDiv.textContent = "No se pudo cargar la categoría.";
+    });
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!confirm("¿Seguro que deseas eliminar esta categoría?")) return;
+
+    try {
+      await API.delete(`categorias/${id}/`);
+      alert("Categoría eliminada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al eliminar categoría:", err);
+      alert("No se pudo eliminar la categoría.");
+    }
+  });
+}

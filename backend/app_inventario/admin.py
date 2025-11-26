@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Proveedores, Marcas, Categorias, Modelos, Estados, Productos, Usuarios, Asignaciones, Mantenciones, HistorialEstados, Documentaciones, Notificaciones, LogAcceso
+from .models import Proveedores, Marcas, Categorias, Modelos, Estados, Productos, Usuarios, Asignaciones, Mantenciones, HistorialEstados, Documentaciones, Notificaciones, LogAcceso, Sucursales, CodigoQR
 # Register your models here.
 
 
@@ -16,3 +16,5 @@ admin.site.register(HistorialEstados)
 admin.site.register(Documentaciones)
 admin.site.register(Notificaciones)
 admin.site.register(LogAcceso)
+admin.site.register(Sucursales)
+admin.site.register(CodigoQR)

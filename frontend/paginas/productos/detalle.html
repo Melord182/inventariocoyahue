@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle Producto - Inventario Coyahue</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/src/css/styles.css">
+</head>
+
+<body>
+
+  <!-- TOPBAR -->
+  <nav class="topbar" id="app-topbar"></nav>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="app-sidebar"></aside>
+
+    <!-- CONTENIDO -->
+    <main class="main-content">
+      <div class="container-fluid">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h2 class="fw-bold text-primary mb-0" id="nombreProd">Producto</h2>
+            <p class="text-muted mb-0">Detalle del equipo seleccionado.</p>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="listar.html" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <a id="btnEditar" href="#" class="btn btn-primary btn-sm">
+              <i class="bi bi-pencil"></i> Editar
+            </a>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- INFO PRINCIPAL -->
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Nro. de serie:</strong></p>
+                  <p id="codigoProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Categoría:</strong></p>
+                  <p id="categoriaProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Sucursal:</strong></p>
+                  <p id="sucursalProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Estado:</strong></p>
+                  <p id="estadoProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Factura / Documento:</strong></p>
+                  <p id="facturaProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Fecha de compra:</strong></p>
+                  <p id="fechaProd" class="text-muted">—</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Garantía:</strong></p>
+                  <p id="garantiaProd" class="text-muted">—</p>
+                </div>
+              </div>
+
+              <hr class="my-4">
+
+              <h5 class="fw-semibold mb-2">Componentes / Observaciones</h5>
+              <ul id="componentesProd" class="list-unstyled mb-0">
+                <li class="text-muted">Sin detalle de componentes.</li>
+              </ul>
+
+              <hr class="my-4">
+
+              <h5 class="fw-semibold mb-2">Historial de estados</h5>
+              <ul id="historialProd" class="list-group">
+                <!-- se llena desde productos.js -->
+              </ul>
+
+            </div>
+          </div>
+
+          <!-- IMAGEN + QR -->
+          <div class="col-lg-4">
+            <div class="card p-4 text-center">
+              <img id="imgProducto"
+                   src="/src/img/no-image.png"
+                   class="img-fluid rounded border mb-3"
+                   style="max-height:220px; object-fit:contain; border:2px solid #ddd;">
+
+              <h6 class="fw-semibold mb-3">Código QR</h6>
+              <div id="qrDetalle" class="mb-3"></div>
+              <button class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-printer"></i> Imprimir QR
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="/src/js/main.js"></script>
+<script type="module" src="/src/js/productos.js"></script>
+</body>
+</html>
+
+

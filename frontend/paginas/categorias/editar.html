@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Categoría - Inventario Coyahue</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="/src/css/styles.css">
+</head>
+
+<body>
+
+  <!-- Topbar -->
+  <nav class="topbar" id="app-topbar"></nav>
+
+  <div class="app-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="app-sidebar"></aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="container-fluid">
+
+        <!-- Título -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="fw-bold text-primary">Editar Categoría</h2>
+          <a href="listar.html" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+          </a>
+        </div>
+
+        <!-- Formulario -->
+        <div class="card p-4">
+          <form id="formEditarCategoria">
+
+            <!-- ID oculto -->
+            <input type="hidden" id="idCategoria">
+
+            <div class="row g-3">
+
+              <div class="col-md-6">
+                <label class="form-label">Nombre de la categoría</label>
+                <input type="text" id="nombre" class="form-control" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Imagen (URL opcional)</label>
+                <input type="text" id="imagen" class="form-control" placeholder="https://ejemplo.com/img.png">
+              </div>
+
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar cambios
+              </button>
+              <a href="listar.html" class="btn btn-outline-secondary">
+                Cancelar
+              </a>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/src/js/main.js"></script>
+  <script type="module" src="/src/js/categorias.js"></script>
+
+</body>
+
+</html>

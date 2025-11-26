@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proveedores - Inventario Coyahue</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/src/css/styles.css">
+
+  <style>
+    #graficoProveedores {
+      max-height: 220px;
+    }
+  </style>
+</head>
+
+<body data-theme="light">
+
+  <!-- TOPBAR -->
+  <nav id="app-topbar" class="topbar"></nav>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <!-- CONTENIDO -->
+    <main class="main-content">
+
+      <!-- TÍTULO + ACCIONES -->
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h2 class="fw-bold text-primary m-0">Proveedores</h2>
+          <p class="text-muted m-0">
+            <span id="totalProveedores">0</span> proveedores registrados
+          </p>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-success btn-sm" id="btnExportExcel">
+         <i class="bi bi-file-earmark-excel me-1"></i> Excel
+        </button>
+        <button class="btn btn-outline-danger btn-sm" id="btnExportPDF">
+        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+        </button>
+
+        <a class="btn btn-primary btn-sm" href="agregar.html">
+          <i class="bi bi-plus-circle me-1"></i> Nuevo
+        </a>
+
+
+
+        </div>
+      </div>
+
+      <!-- FILTRO DE BÚSQUEDA -->
+      <div class="card p-3 mb-4">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <input type="text" id="filtroNombre" class="form-control" placeholder="Buscar por Nombre...">
+          </div>
+          <div class="col-md-3">
+            <input type="text" id="filtroEmail" class="form-control" placeholder="Buscar por Email...">
+          </div>
+          <div class="col-md-3">
+            <input type="text" id="filtroTelefono" class="form-control" placeholder="Buscar por Teléfono...">
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-secondary w-100" id="btnLimpiarFiltros">
+              <i class="bi bi-eraser"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA -->
+      <div class="card p-3 table-responsive">
+        <table id="tablaProveedores" class="table table-hover align-middle" style="width:100%;">
+          <thead class="table-primary text-center">
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyProveedores"></tbody>
+        </table>
+      </div>
+
+      <!-- GRÁFICO PEQUEÑO -->
+      <div class="card p-3 mt-4">
+        <h6 class="text-center">📊 Proveedores por Inicial</h6>
+        <canvas id="graficoProveedores"></canvas>
+      </div>
+
+      <!-- MODAL CRUD -->
+      <div class="modal fade" id="modalProveedor" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+
+            <div class="modal-header">
+              <h5 class="modal-title" id="modalTitle"></h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+              <form id="formProveedor">
+                <input type="hidden" id="proveedorId">
+
+                <label class="form-label mt-2">Nombre</label>
+                <input type="text" id="nombre" class="form-control" required>
+
+                <label class="form-label mt-2">Teléfono</label>
+                <input type="text" id="telefono" class="form-control">
+
+                <label class="form-label mt-2">Email</label>
+                <input type="email" id="email" class="form-control">
+
+                <label class="form-label mt-2">RUT</label>
+                <input type="text" id="rut" class="form-control">
+
+                <label class="form-label mt-2">Ubicación</label>
+                <input type="text" id="ubicacion" class="form-control">
+              </form>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button class="btn btn-primary" id="btnGuardarProveedor">
+                <i class="bi bi-check-circle me-2"></i> Guardar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <footer class="text-center mt-4 small text-muted">
+        © 2025 Grupo Coyahue — Sistema Inventario
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- DataTables -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+  <!-- Export Excel/PDF -->
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+  <!-- Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/src/js/main.js"></script>
+<script type="module" src="/src/js/proveedores.js"></script>
+
+
+</body>
+</html>

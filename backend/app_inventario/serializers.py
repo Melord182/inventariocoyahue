@@ -124,7 +124,8 @@ class ProductosListSerializer(serializers.ModelSerializer):
     modelo_nombre = serializers.SerializerMethodField()
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     estado_nombre = serializers.CharField(source='estado.nombre', read_only=True)
-    
+    sucursal = SucursalSerializer(read_only=True)
+    codigo_qr = CodigoQRSerializer(source='qr', read_only=True)  
     class Meta:
         model = Productos
         fields = [
@@ -133,7 +134,7 @@ class ProductosListSerializer(serializers.ModelSerializer):
             'modelo', 'modelo_nombre',
             'categoria', 'categoria_nombre',
             'estado', 'estado_nombre',
-            'documento_factura'
+            'documento_factura', 'sucursal', 'codigo_qr', 'garantia_meses', 'estado_garantia'
         ]
     
     def get_modelo_nombre(self, obj):
@@ -141,38 +142,64 @@ class ProductosListSerializer(serializers.ModelSerializer):
 
 
 class ProductosDetailSerializer(serializers.ModelSerializer):
-    """Serializer detallado para productos (incluye relaciones)"""
     proveedor = ProveedoresSerializer(read_only=True)
     modelo = ModelosSerializer(read_only=True)
     categoria = CategoriasSerializer(read_only=True)
     estado = EstadosSerializer(read_only=True)
     sucursal = SucursalSerializer(read_only=True)
-    codigo_qr = CodigoQRSerializer(read_only=True)
-    
-    # Relaciones inversas
+
+    # QR asociado al producto (OneToOne: related_name='qr')
+    codigo_qr = CodigoQRSerializer(source="qr", read_only=True)
+
+    # Datos relacionados
     asignaciones = serializers.SerializerMethodField()
     mantenciones = serializers.SerializerMethodField()
     historial_estados = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Productos
         fields = [
-            'id', 'nro_serie', 'fecha_compra', 'documento_factura',
-            'proveedor', 'modelo', 'categoria', 'estado',
-            'asignaciones', 'mantenciones', 'historial_estados'
+            "id",
+            "nro_serie",
+            "fecha_compra",
+            "documento_factura",
+            "garantia_meses",
+            "fecha_venc_garantia",
+            "estado_garantia",
+            "proveedor",
+            "modelo",
+            "categoria",
+            "estado",
+            "sucursal",
+            "codigo_qr",
+            "asignaciones",
+            "mantenciones",
+            "historial_estados",
         ]
-    
+
     def get_asignaciones(self, obj):
-        asignaciones = obj.asignaciones.filter(fecha_devolucion__isnull=True)
-        return AsignacionesSerializer(asignaciones, many=True).data
-    
+        """
+        Solo asignaciones activas (sin fecha_devolucion).
+        Se hace select_related para no spamear la BD.
+        """
+        qs = obj.asignaciones.select_related("usuario__user").filter(
+            fecha_devolucion__isnull=True
+        )
+        return AsignacionesSerializer(qs, many=True).data
+
     def get_mantenciones(self, obj):
-        mantenciones = obj.mantenciones.all()[:5]  # Últimas 5
-        return MantencionesSerializer(mantenciones, many=True).data
-    
+        """
+        Últimas 5 mantenciones del producto.
+        """
+        qs = obj.mantenciones.select_related("proveedor").all()[:5]
+        return MantencionesSerializer(qs, many=True).data
+
     def get_historial_estados(self, obj):
-        historial = obj.historial_estados.all()[:10]  # Últimos 10
-        return HistorialEstadosSerializer(historial, many=True).data
+        """
+        Últimos 10 cambios de estado del producto.
+        """
+        qs = obj.historial_estados.select_related("estado").all()[:10]
+        return HistorialEstadosSerializer(qs, many=True).data
 
 
 class ProductosCreateUpdateSerializer(serializers.ModelSerializer):
@@ -209,57 +236,97 @@ class AsignacionesSerializer(serializers.ModelSerializer):
         return "Activa" if not obj.fecha_devolucion else "Devuelta"
 
 
-class AsignacionesCreateSerializer(serializers.ModelSerializer):
-    """Serializer para crear asignaciones"""
+class AsignacionesSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.SerializerMethodField()
+    producto_info = serializers.SerializerMethodField()
+
     class Meta:
         model = Asignaciones
-        fields = ['producto', 'usuario', 'fecha_devolucion']
-    
-    def validate_producto(self, value):
-        """Validar que el producto no tenga asignación activa"""
-        asignacion_activa = Asignaciones.objects.filter(
-            producto=value,
-            fecha_devolucion__isnull=True
-        ).exists()
-        
-        if asignacion_activa:
-            raise serializers.ValidationError(
-                "Este producto ya tiene una asignación activa."
-            )
-        return value
+        fields = [
+            "id",
+            "usuario",
+            "usuario_nombre",
+            "producto",
+            "producto_info",
+            "fecha_asignacion",
+            "fecha_devolucion",
+        ]
 
+    def get_usuario_nombre(self, obj):
+        """
+        Evita reventar si por alguna razón falta el user de Django.
+        """
+        usuario = getattr(obj, "usuario", None)
+        user = getattr(usuario, "user", None) if usuario else None
+        if user:
+            nombre = user.get_full_name()
+            return nombre or user.username
+        return ""
+
+    def get_producto_info(self, obj):
+        producto = getattr(obj, "producto", None)
+        if not producto:
+            return {}
+
+        categoria = getattr(producto, "categoria", None)
+        return {
+            "nro_serie": getattr(producto, "nro_serie", ""),
+            "categoria": getattr(categoria, "nombre", "") if categoria else "",
+            "modelo": str(getattr(producto, "modelo", "")),
+        }
 
 # ============= SERIALIZERS DE MANTENCIONES =============
 
 class MantencionesSerializer(serializers.ModelSerializer):
-    """Serializer para Mantenciones"""
-    producto_nro_serie = serializers.CharField(source='producto.nro_serie', read_only=True)
-    proveedor_nombre = serializers.CharField(source='proveedor.nombre', read_only=True)
-    
+    producto_nro_serie = serializers.CharField(
+        source="producto.nro_serie", read_only=True
+    )
+    proveedor_nombre = serializers.SerializerMethodField()
+
     class Meta:
         model = Mantenciones
         fields = [
-            'id', 'producto', 'producto_nro_serie',
-            'fecha', 'detalle',
-            'proveedor', 'proveedor_nombre'
+            "id",
+            "producto",
+            "producto_nro_serie",
+            "proveedor",
+            "proveedor_nombre",
+            "fecha",
+            "descripcion",
+            "costo",
         ]
+
+    def get_proveedor_nombre(self, obj):
+        """
+        El proveedor puede ser null (on_delete=SET_NULL), 
+        así que lo manejamos sin romper.
+        """
+        if obj.proveedor:
+            return obj.proveedor.nombre
+        return ""
 
 
 # ============= SERIALIZERS DE HISTORIAL =============
 
 class HistorialEstadosSerializer(serializers.ModelSerializer):
-    """Serializer para Historial de Estados"""
-    producto_nro_serie = serializers.CharField(source='producto.nro_serie', read_only=True)
-    estado_nombre = serializers.CharField(source='estado.nombre', read_only=True)
-    
+    producto_nro_serie = serializers.CharField(
+        source="producto.nro_serie", read_only=True
+    )
+    estado_nombre = serializers.CharField(
+        source="estado.nombre", read_only=True
+    )
+
     class Meta:
         model = HistorialEstados
         fields = [
-            'id', 'producto', 'producto_nro_serie',
-            'fecha', 'estado', 'estado_nombre', 'comentario'
+            "id",
+            "producto",
+            "producto_nro_serie",
+            "estado",
+            "estado_nombre",
+            "fecha",
+            "comentario",
         ]
-
-
 class HistorialEstadosCreateSerializer(serializers.ModelSerializer):
     """Serializer para crear historial (actualiza estado del producto automáticamente)"""
     class Meta:
