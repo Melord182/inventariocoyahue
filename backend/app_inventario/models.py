@@ -5,6 +5,8 @@ from io import BytesIO
 import qrcode
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
 
 class Proveedores(models.Model):
     """Proveedores de productos tecnológicos"""
@@ -230,20 +232,65 @@ class Documentaciones(models.Model):
         return f"{self.tipo_documento} - {self.nombre_archivo}"
 
 
+
+User = get_user_model()
 class Notificaciones(models.Model):
-    """Notificaciones del sistema"""
-    producto = models.ForeignKey(Productos, on_delete=models.CASCADE, related_name='notificaciones')
+
+    CATEGORIAS = [
+        ("mantenimiento", "Mantenimiento"),
+        ("garantia", "Garantía"),
+    ]
+
+    # Relaciones
+    producto = models.ForeignKey(
+        'Productos',
+        on_delete=models.CASCADE,
+        related_name='notificaciones',
+        null=True,
+        blank=True
+    )
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notificaciones',
+        null=True,
+        blank=True
+    )
+
+    categoria = models.CharField(max_length=30, choices=CATEGORIAS, null=True, blank=True)
+    titulo = models.CharField(max_length=200, null=True, blank=True)
     mensaje = models.TextField()
-    fecha = models.DateField(auto_now_add=True)
-    hora = models.TimeField(auto_now_add=True)
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     leido = models.BooleanField(default=False)
+    fecha_lectura = models.DateTimeField(null=True, blank=True)
+
+    prioridad = models.CharField(
+        max_length=10,
+        choices=[('baja', 'Baja'), ('media', 'Media'), ('alta', 'Alta')],
+        default='media'
+    )
+    url_accion = models.CharField(max_length=500, blank=True)
 
     class Meta:
+        verbose_name = "Notificación"
         verbose_name_plural = "Notificaciones"
-        ordering = ['-fecha', '-hora']
+        ordering = ['-fecha_creacion']
+        # Indexes: NO usar "-" dentro de fields
+        indexes = [
+            models.Index(fields=['fecha_creacion']),
+            models.Index(fields=['usuario', 'leido']),
+        ]
 
     def __str__(self):
-        return f"Notificación: {self.mensaje[:50]}..."
+        return f"{self.categoria.upper()}: {self.titulo}"
+
+    def marcar_como_leida(self):
+        """Marca la notificación como leída"""
+        from django.utils import timezone
+        self.leido = True
+        self.fecha_lectura = timezone.now()
+        self.save()
 
 
 class LogAcceso(models.Model):

@@ -16,7 +16,15 @@
 <body data-theme="light">
 
   <!-- TOPBAR (se carga con main.js) -->
-  <nav class="topbar" id="app-topbar"></nav>
+  <nav class="topbar d-flex align-items-center justify-content-between px-3" id="app-topbar">
+      <!-- Aseguramos que exista un badge para notificaciones -->
+      <div id="badge-container" style="position: relative;">
+          <span id="badgeNoti"
+                class="badge bg-danger"
+                style="position:absolute; top:-4px; right:-4px; display:none;">
+          </span>
+      </div>
+  </nav>
 
   <div class="app-container">
 
@@ -32,15 +40,15 @@
           <button class="btn btn-primary btn-sm filtro-noti active" data-filtro="todas">
             <i class="bi bi-ui-checks me-1"></i>Todas
           </button>
-          <button class="btn btn-outline-danger btn-sm filtro-noti" data-filtro="stock">
-            <i class="bi bi-exclamation-circle me-1"></i>Stock
-          </button>
-          <button class="btn btn-outline-warning btn-sm filtro-noti" data-filtro="proveedor">
-            <i class="bi bi-truck me-1"></i>Proveedor
-          </button>
-          <button class="btn btn-outline-info btn-sm filtro-noti" data-filtro="sistema">
-            <i class="bi bi-info-circle me-1"></i>Sistema
-          </button>
+          <div class="d-flex gap-2 mb-3 flex-wrap">
+            <button class="btn btn-outline-primary btn-sm filtro-noti" data-filtro="mantenimiento">
+              <i class="bi bi-gear-fill me-1"></i>Mantenimiento
+            </button>
+
+            <button class="btn btn-outline-info btn-sm filtro-noti" data-filtro="garantia">
+              <i class="bi bi-shield-check me-1"></i>Garantía
+            </button>
+          </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -71,7 +79,9 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title"><i class="bi bi-bell-fill me-2"></i>Detalle de Notificación</h5>
+          <h5 class="modal-title">
+            <i class="bi bi-bell-fill me-2"></i>Detalle de Notificación
+          </h5>
           <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -86,9 +96,9 @@
   </div>
 
   <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/src/js/main.js"></script>
-<script type="module" src="/src/js/notificaciones.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/src/js/main.js"></script>
+  <script type="module" src="/src/js/notificaciones.js"></script>
 
 </body>
 </html>

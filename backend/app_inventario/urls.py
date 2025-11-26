@@ -96,6 +96,8 @@ urlpatterns = [
     path('notificaciones/', views.notificaciones, name='notificaciones'),
     path('notificaciones/<int:pk>/marcar-leida/', views.marcar_leida, name='marcar_leida'),
     path('notificaciones/marcar-todas-leidas/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
+    path('notificaciones/no-leidas/', views.no_leidas, name='no_leidas'),
+
 
     #   CONFIGURACION
     path('configuracion/', views.configuracion, name='configuracion'),

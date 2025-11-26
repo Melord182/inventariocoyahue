@@ -1,11 +1,11 @@
 from django.apps import AppConfig
 
 
-from django.apps import AppConfig
-
-class AppConfig(AppConfig):  
+class InventarioConfig(AppConfig):  
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'app_inventario' 
-    verbose_name = 'Inventario'  # ← Opcional
+    name = 'app_inventario'
+    verbose_name = 'Inventario'
+
     def ready(self):
+        # importa las señales una sola vez
         import app_inventario.signals
