@@ -18,7 +18,7 @@ function alertSuccess(msg) {
       icon: "success",
       title: "Éxito",
       text: msg,
-      timer: 1500,
+      timer: 1600,
       showConfirmButton: false,
     });
   } else {
@@ -47,7 +47,7 @@ let chartEstado = null;
 
 async function initStockDashboard() {
   const dashboard = document.getElementById("stock-dashboard");
-  if (!dashboard) return; // no estamos en listar.html de stock
+  if (!dashboard) return; // no estamos en la vista de stock
 
   const totalProductosEl = document.getElementById("totalProductos");
   const totalEnUsoEl = document.getElementById("totalEnUso");
@@ -64,7 +64,7 @@ async function initStockDashboard() {
   }
 
   try {
-    // 1) Productos para estado de stock
+    // 1) Productos para tarjetas y gráficos
     const resProd = await API.get("productos/");
     const productos = normalizarLista(resProd);
 
@@ -94,17 +94,17 @@ async function initStockDashboard() {
       if (!porSucursal[sucursal]) porSucursal[sucursal] = 0;
       porSucursal[sucursal]++;
 
-      // Conteo por estado (para gráfico)
-      const keyEstado = estado || p.estado_nombre || "Sin estado";
+      // Conteo por etiqueta de estado
+      const keyEstado = p.estado_nombre || "Sin estado";
       if (!porEstado[keyEstado]) porEstado[keyEstado] = 0;
       porEstado[keyEstado]++;
     });
 
-    // Pintar tarjetas
     if (totalProductosEl) totalProductosEl.textContent = String(totales.total);
     if (totalEnUsoEl) totalEnUsoEl.textContent = String(totales.enUso);
     if (totalBodegaEl) totalBodegaEl.textContent = String(totales.bodega);
-    if (totalMantencionEl) totalMantencionEl.textContent = String(totales.mantencion);
+    if (totalMantencionEl)
+      totalMantencionEl.textContent = String(totales.mantencion);
 
     // Gráfico por sucursal
     if (canvasSucursal && window.Chart) {
@@ -158,11 +158,12 @@ async function initStockDashboard() {
       });
     }
 
-    // 2) Movimientos recientes (si existe endpoint)
+    // 2) Movimientos recientes (usa el modelo Movimientos del backend)
     if (tbodyMov) {
       try {
         const resMov = await API.get("movimientos/");
         const movimientos = normalizarLista(resMov);
+
         if (!movimientos.length) {
           tbodyMov.innerHTML =
             '<tr><td colspan="4" class="text-center text-muted">Sin movimientos registrados.</td></tr>';
@@ -170,17 +171,9 @@ async function initStockDashboard() {
           tbodyMov.innerHTML = "";
           movimientos.slice(0, 10).forEach((m) => {
             const fecha = m.fecha || m.fecha_movimiento || m.created_at || "";
-            const sku =
-              (m.producto && m.producto.nro_serie) ||
-              m.producto_sku ||
-              m.sku ||
-              "";
-            const tipo = m.tipo || m.accion || m.tipo_movimiento || "";
-            const detalle =
-              m.detalle ||
-              m.descripcion ||
-              m.comentarios ||
-              "";
+            const sku = m.sku || "";
+            const tipo = m.tipo || "";
+            const detalle = m.comentarios || m.referencia || "";
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
@@ -228,9 +221,31 @@ function initFormularioEntrada() {
     const cantidad = Number(
       document.getElementById("cantidad")?.value || 0
     );
-    const proveedor = (document.getElementById("proveedor")?.value || "").trim();
-    const referencia = (document.getElementById("referencia")?.value || "").trim();
-    const comentarios = (document.getElementById("comentarios")?.value || "").trim();
+    const proveedor =
+      (document.getElementById("proveedor")?.value || "").trim();
+    const referencia =
+      (document.getElementById("referencia")?.value || "").trim();
+    const comentarios =
+      (document.getElementById("comentarios")?.value || "").trim();
+
+    if (!sku) {
+      alertError("El SKU es obligatorio.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-plus-circle me-1"></i> Registrar Entrada';
+      }
+      return;
+    }
+    if (!cantidad || cantidad <= 0) {
+      alertError("La cantidad debe ser mayor a 0.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-plus-circle me-1"></i> Registrar Entrada';
+      }
+      return;
+    }
 
     const payload = {
       tipo: "entrada",
@@ -277,15 +292,36 @@ function initFormularioSalida() {
       document.getElementById("cantidad")?.value || 0
     );
     const motivo = document.getElementById("motivo")?.value || "";
-    const referencia = (document.getElementById("referencia")?.value || "").trim();
-    const comentarios = (document.getElementById("comentarios")?.value || "").trim();
+    const referencia =
+      (document.getElementById("referencia")?.value || "").trim();
+    const comentarios =
+      (document.getElementById("comentarios")?.value || "").trim();
+
+    if (!sku) {
+      alertError("El SKU es obligatorio.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-check-circle me-1"></i> Registrar Salida';
+      }
+      return;
+    }
+    if (!cantidad || cantidad <= 0) {
+      alertError("La cantidad debe ser mayor a 0.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-check-circle me-1"></i> Registrar Salida';
+      }
+      return;
+    }
 
     const payload = {
       tipo: "salida",
       sku,
       cantidad,
-      motivo,
-      referencia,
+      proveedor: "", // en salida no usamos proveedor, lo dejamos vacío
+      referencia: motivo || referencia,
       comentarios,
     };
 
@@ -325,13 +361,41 @@ function initFormularioAjuste() {
       document.getElementById("nuevaCantidad")?.value || 0
     );
     const tipoAjuste = document.getElementById("tipoAjuste")?.value || "";
-    const comentarios = (document.getElementById("comentarios")?.value || "").trim();
+    const comentariosBase =
+      (document.getElementById("comentarios")?.value || "").trim();
+
+    if (!sku) {
+      alertError("El SKU es obligatorio.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-save me-1"></i> Guardar Ajuste';
+      }
+      return;
+    }
+    if (nuevaCantidad < 0) {
+      alertError("La nueva cantidad no puede ser negativa.");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-save me-1"></i> Guardar Ajuste';
+      }
+      return;
+    }
+
+    const comentarios =
+      tipoAjuste && comentariosBase
+        ? "[" + tipoAjuste + "] " + comentariosBase
+        : tipoAjuste
+        ? "[" + tipoAjuste + "]"
+        : comentariosBase;
 
     const payload = {
       tipo: "ajuste",
       sku,
-      nueva_cantidad: nuevaCantidad,
-      tipo_ajuste: tipoAjuste,
+      cantidad: nuevaCantidad, // usamos cantidad = stock real
+      proveedor: "",
+      referencia: "",
       comentarios,
     };
 

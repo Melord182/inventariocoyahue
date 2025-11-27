@@ -127,7 +127,7 @@
           <a class="nav-link" href="reportes-usuario.html">
             <i class="bi bi-graph-up"></i> Reportes
           </a>
-          <a class="nav-link" href="/paginas/ajustes/ajustes.html">
+          <a class="nav-link" href="/paginas/usuario/ajustes-usuario.html">
             <i class="bi bi-gear"></i> Ajustes
           </a>
         </nav>
@@ -313,6 +313,7 @@
       });
     }
 
+    // ---- DETALLE CON QR ----
     window.verDetalle = async function(id) {
       const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
       const titulo = document.getElementById('modalTitulo');
@@ -334,6 +335,21 @@
         const garantiaValor = p.garantia_meses ?? p.garantia ?? null;
         const garantiaTexto = garantiaValor === null ? "—" : `${garantiaValor} meses`;
 
+        // Construimos HTML para el QR
+        let qrHtml = '<span class="text-muted small">No hay código QR disponible para este producto.</span>';
+        if (p.codigo_qr) {
+          const qrUrlRaw = p.codigo_qr.imagen_qr_url || p.codigo_qr.imagen_qr;
+          if (qrUrlRaw) {
+            const qrFinalUrl = qrUrlRaw.startsWith("/media/")
+              ? `http://127.0.0.1:8000${qrUrlRaw}`
+              : qrUrlRaw;
+            qrHtml = `
+              <img src="${qrFinalUrl}" alt="QR del producto"
+                   style="max-width: 180px; max-height: 180px;">
+            `;
+          }
+        }
+
         contenido.innerHTML = `
           <div class="row">
             <div class="col-md-6">
@@ -346,6 +362,11 @@
               <p><strong>Fecha de compra:</strong><br>${p.fecha_compra || "—"}</p>
               <p><strong>Garantía:</strong><br>${garantiaTexto}</p>
               <p><strong>Factura:</strong><br>${p.documento_factura || "—"}</p>
+              <hr>
+              <h6 class="fw-semibold mb-2">Código QR</h6>
+              <div class="text-center">
+                ${qrHtml}
+              </div>
             </div>
           </div>
         `;

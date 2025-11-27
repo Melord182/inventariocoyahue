@@ -4,7 +4,7 @@ from .models import (
     Proveedores, Marcas, Categorias, Modelos, Estados, 
     Productos, Usuarios, Asignaciones, Mantenciones, 
     HistorialEstados, Documentaciones, Notificaciones, LogAcceso,
-    Sucursales, CodigoQR
+    Sucursales, CodigoQR, Movimientos
 )
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -495,3 +495,10 @@ class LogAccesoSerializer(serializers.ModelSerializer):
     
     def get_usuario_nombre(self, obj):
         return obj.usuario.user.get_full_name()
+    
+# ============= SERIALIZERS DE MOVIMIENTOS =============
+
+class MovimientosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Movimientos
+        fields = "__all__"

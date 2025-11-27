@@ -1,192 +1,253 @@
-// src/js/marcas.js - NUEVO - CRUD completo para Marcas
+// src/js/marcas.js
+// CRUD frontend para Marcas
+// Requiere: /src/js/api.js y JWT válido en localStorage
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.Api) {
-        console.error("Api no está definido.");
-        return;
-    }
+import { API } from "/src/js/api.js";
 
-    if (!Api.isAuthenticated()) {
-        window.location.href = "../login/login.html";
-        return;
-    }
+function getParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
 
-    if (document.getElementById('tablaMarcas')) {
-        cargarTablaMarcas();
-    }
+function alertSuccess(msg) {
+  if (window.Swal) {
+    Swal.fire({
+      icon: "success",
+      title: "Éxito",
+      text: msg,
+      timer: 1600,
+      showConfirmButton: false,
+    });
+  } else {
+    alert(msg);
+  }
+}
 
-    if (document.getElementById('formAgregarMarca')) {
-        manejarFormularioAgregar();
-    }
+function alertError(msg) {
+  if (window.Swal) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: msg,
+    });
+  } else {
+    alert(msg);
+  }
+}
 
-    if (document.getElementById('formEditarMarca')) {
-        cargarDatosParaEditar();
-        manejarFormularioEditar();
-    }
+let marcasCache = [];
 
-    if (document.getElementById('formEliminarMarca')) {
-        cargarDatosParaEliminar();
-        manejarFormularioEliminar();
-    }
+// Detectar en qué página estamos
+document.addEventListener("DOMContentLoaded", () => {
+  const path = window.location.pathname;
+
+  if (path.includes("/marcas/") && path.endsWith("listar.html")) {
+    initListarMarcas();
+  } else if (path.includes("/marcas/") && path.endsWith("agregar.html")) {
+    initAgregarMarca();
+  } else if (path.includes("/marcas/") && path.endsWith("editar.html")) {
+    initEditarMarca();
+  } else if (path.includes("/marcas/") && path.endsWith("eliminar.html")) {
+    initEliminarMarca();
+  }
 });
 
-async function cargarTablaMarcas() {
-    const tablaBody = document.getElementById('tablaMarcas');
-    tablaBody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando...</td></tr>';
-    
-    try {
-        const marcas = await Api.getMarcas();
-        
-        if (marcas.length === 0) {
-            tablaBody.innerHTML = '<tr><td colspan="3" class="text-center">No hay marcas registradas.</td></tr>';
-            return;
-        }
+// LISTAR ----------------------------------------------------
 
-        let filas = '';
-        marcas.forEach(m => {
-            filas += `
-                <tr>
-                  <td>${m.id}</td>
-                  <td>${m.nombre}</td>
-                  <td class="text-center">
-                    <a href="editar.html?id=${m.id}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
-                    <a href="eliminar.html?id=${m.id}" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></a>
-                  </td>
-                </tr>
-            `;
-        });
-        tablaBody.innerHTML = filas;
-    } catch (error) {
-        console.error("Error al cargar marcas:", error);
-        tablaBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error al cargar datos.</td></tr>';
-    }
-}
+function initListarMarcas() {
+  const inputBuscar = document.getElementById("inputBuscarMarca");
+  const btnLimpiar = document.getElementById("btnLimpiarFiltrosMarca");
 
-function manejarFormularioAgregar() {
-    const form = document.getElementById('formAgregarMarca');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        boton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-
-        const datos = {
-            nombre: document.getElementById('nombre').value
-        };
-
-        try {
-            await Api.createMarca(datos);
-            alert('¡Marca agregada con éxito!');
-            window.location.href = 'listar.html';
-        } catch (error) {
-            console.error("Error al agregar marca:", error);
-            alert('Error al agregar marca.');
-            boton.disabled = false;
-            boton.innerHTML = '<i class="bi bi-check-circle me-2"></i>Guardar Marca';
-        }
+  if (inputBuscar) {
+    inputBuscar.addEventListener("input", aplicarFiltrosYRender);
+  }
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener("click", () => {
+      if (inputBuscar) inputBuscar.value = "";
+      aplicarFiltrosYRender();
     });
+  }
+
+  cargarMarcasLista();
 }
 
-async function cargarDatosParaEditar() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+async function cargarMarcasLista() {
+  const tbody = document.getElementById("tbodyMarcas");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="2" class="text-center">Cargando marcas...</td></tr>`;
+  }
 
-    if (!id) {
-        alert('ID de marca no encontrado.');
-        window.location.href = 'listar.html';
-        return;
+  try {
+    const res = await API.get("marcas/"); // GET /api/api/marcas/
+    const lista = Array.isArray(res) ? res : res.results || [];
+    marcasCache = lista;
+
+    aplicarFiltrosYRender();
+  } catch (err) {
+    console.error("Error al cargar marcas:", err);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="2" class="text-danger text-center">Error al cargar marcas</td></tr>`;
     }
-
-    try {
-        const marca = await Api.getMarca(id);
-        
-        document.getElementById('idMarca').value = marca.id;
-        document.getElementById('nombre').value = marca.nombre;
-
-    } catch (error) {
-        console.error("Error al cargar marca:", error);
-        alert('Error al cargar los datos de la marca.');
-        window.location.href = 'listar.html';
-    }
+  }
 }
 
-function manejarFormularioEditar() {
-    const form = document.getElementById('formEditarMarca');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        boton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...';
+function aplicarFiltrosYRender() {
+  const inputBuscar = document.getElementById("inputBuscarMarca");
+  const texto = (inputBuscar?.value || "").toLowerCase().trim();
 
-        const id = document.getElementById('idMarca').value;
-        const datos = {
-            nombre: document.getElementById('nombre').value
-        };
+  const filtradas = marcasCache.filter((m) => {
+    const nombre = (m.nombre || "").toLowerCase();
+    return !texto || nombre.includes(texto);
+  });
 
-        try {
-            await Api.updateMarca(id, datos);
-            alert('¡Marca actualizada con éxito!');
-            window.location.href = 'listar.html';
-        } catch (error) {
-            console.error("Error al actualizar marca:", error);
-            alert('Error al actualizar marca.');
-            boton.disabled = false;
-            boton.innerHTML = '<i class="bi bi-save me-2"></i>Actualizar Cambios';
-        }
-    });
+  renderTablaMarcas(filtradas);
 }
 
-async function cargarDatosParaEliminar() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
-    
-    const infoDiv = document.getElementById('marca-info');
-    const idInput = document.getElementById('idMarca');
+function renderTablaMarcas(lista) {
+  const tbody = document.getElementById("tbodyMarcas");
+  const spanTotal = document.getElementById("totalMarcas");
+  if (!tbody) return;
 
-    if (!id) {
-        alert('ID de marca no encontrado.');
-        window.location.href = 'listar.html';
-        return;
+  if (spanTotal) spanTotal.textContent = lista.length;
+
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="2" class="text-muted text-center">No hay marcas que coincidan con el filtro.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = "";
+  lista.forEach((m) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${m.nombre || "Sin nombre"}</td>
+      <td class="text-end">
+        <a href="editar.html?id=${m.id}" class="btn btn-sm btn-outline-primary me-1">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <a href="eliminar.html?id=${m.id}" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-trash"></i>
+        </a>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// AGREGAR ---------------------------------------------------
+
+function initAgregarMarca() {
+  const form = document.getElementById("formMarca");
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre")?.value.trim() || "";
+
+    if (!nombre) {
+      alertError("El nombre es obligatorio.");
+      return;
     }
+
+    const payload = { nombre };
 
     try {
-        const marca = await Api.getMarca(id);
-        
-        infoDiv.innerHTML = `
-            <strong>ID:</strong> ${marca.id}<br>
-            <strong>Nombre:</strong> ${marca.nombre}
-        `;
-        idInput.value = marca.id;
-
-    } catch (error) {
-        console.error("Error al cargar marca:", error);
-        infoDiv.innerHTML = 'Error al cargar datos de la marca.';
-        document.querySelector('button[type="submit"]').disabled = true;
+      await API.post("marcas/", payload);
+      alertSuccess("Marca creada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al crear marca:", err);
+      alertError("No se pudo crear la marca.");
     }
+  });
 }
 
-function manejarFormularioEliminar() {
-    const form = document.getElementById('formEliminarMarca');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const boton = form.querySelector('button[type="submit"]');
-        boton.disabled = true;
-        boton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Eliminando...';
+// EDITAR ----------------------------------------------------
 
-        const id = document.getElementById('idMarca').value;
+async function initEditarMarca() {
+  const form = document.getElementById("formEditarMarca");
+  if (!form) return;
 
-        try {
-            await Api.deleteMarca(id);
-            alert('¡Marca eliminada con éxito!');
-            window.location.href = 'listar.html';
-        } catch (error) {
-            console.error("Error al eliminar marca:", error);
-            alert('Error al eliminar marca.');
-            boton.disabled = false;
-            boton.innerHTML = '<i class="bi bi-trash me-2"></i>Sí, Eliminar';
-        }
-    });
+  const id = getParam("id");
+  if (!id) {
+    alertError("Falta el ID de la marca.");
+    window.location.href = "listar.html";
+    return;
+  }
+
+  // Cargar datos actuales
+  try {
+    const m = await API.get(`marcas/${id}/`);
+    const nombre = document.getElementById("nombre");
+    if (nombre) nombre.value = m.nombre || "";
+  } catch (err) {
+    console.error("Error al cargar marca:", err);
+    alertError("No se pudo cargar la marca.");
+  }
+
+  // Guardar cambios
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre")?.value.trim() || "";
+    if (!nombre) {
+      alertError("El nombre es obligatorio.");
+      return;
+    }
+
+    const payload = { nombre };
+
+    try {
+      await API.put(`marcas/${id}/`, payload);
+      alertSuccess("Marca actualizada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al actualizar marca:", err);
+      alertError("No se pudo actualizar la marca.");
+    }
+  });
+}
+
+// ELIMINAR --------------------------------------------------
+
+async function initEliminarMarca() {
+  const form = document.getElementById("formEliminarMarca");
+  const infoDiv = document.getElementById("marca-eliminar-info");
+  if (!form) return;
+
+  const id = getParam("id");
+  if (!id) {
+    alertError("Falta el ID de la marca.");
+    window.location.href = "listar.html";
+    return;
+  }
+
+  try {
+    const m = await API.get(`marcas/${id}/`);
+    if (infoDiv) {
+      infoDiv.innerHTML = `
+        <p>¿Seguro que deseas eliminar la marca <strong>${m.nombre || "Sin nombre"}</strong>?</p>
+        <p class="text-muted">Esta acción no se puede deshacer.</p>
+      `;
+    }
+  } catch (err) {
+    console.error("Error al cargar marca:", err);
+    if (infoDiv) {
+      infoDiv.innerHTML =
+        '<p class="text-danger">No se pudo cargar la marca.</p>';
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!confirm("¿Eliminar esta marca?")) return;
+
+    try {
+      await API.delete(`marcas/${id}/`);
+      alertSuccess("Marca eliminada correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al eliminar marca:", err);
+      alertError("No se pudo eliminar la marca.");
+    }
+  });
 }

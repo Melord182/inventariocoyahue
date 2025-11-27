@@ -37,6 +37,7 @@ from .views import (
     LogAccesoViewSet,
     SucursalViewSet,
     CodigoQRViewSet,
+    MovimientosViewSet,
 
 )
 
@@ -59,7 +60,7 @@ router.register(r'notificaciones', NotificacionesViewSet, basename='notificacion
 router.register(r'logs-acceso', LogAccesoViewSet, basename='logs-acceso')
 router.register(r'sucursales', SucursalViewSet)
 router.register(r'codigos-qr', CodigoQRViewSet)
-
+router.register(r'movimientos', MovimientosViewSet, basename='movimientos')
 # URLs de la app
 urlpatterns = [
     path('api/', include(router.urls)),

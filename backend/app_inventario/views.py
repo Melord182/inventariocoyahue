@@ -21,7 +21,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import (
     Proveedores, Marcas, Categorias, Modelos, Estados, Productos,
     Usuarios, Asignaciones, Mantenciones, HistorialEstados,
-    Documentaciones, Notificaciones, LogAcceso, Sucursales, CodigoQR, Usuarios
+    Documentaciones, Notificaciones, LogAcceso, Sucursales, CodigoQR, Usuarios, Movimientos
 )
 from .serializers import (
     ProveedoresSerializer, MarcasSerializer, CategoriasSerializer,
@@ -31,7 +31,7 @@ from .serializers import (
     AsignacionesSerializer, AsignacionesCreateSerializer,
     MantencionesSerializer,
     HistorialEstadosSerializer, HistorialEstadosCreateSerializer,
-    DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer, UsuariosUpdateSerializer
+    DocumentacionesSerializer, NotificacionesSerializer, LogAccesoSerializer, UsuariosUpdateSerializer, MovimientosSerializer
 )
 from .forms import (
     ProductoForm, ProductoFilterForm,
@@ -1399,3 +1399,23 @@ def reportes(request):
         "title": "Generador de Reportes",
     }
     return render(request, "reportes.html", context)
+
+class MovimientosViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar movimientos de stock.
+
+    Endpoints:
+      - GET    /api/movimientos/           -> lista
+      - POST   /api/movimientos/           -> crear
+      - GET    /api/movimientos/{id}/      -> detalle
+      - PUT    /api/movimientos/{id}/      -> actualizar
+      - DELETE /api/movimientos/{id}/      -> eliminar
+    """
+    queryset = Movimientos.objects.all()
+    serializer_class = MovimientosSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["tipo", "sku"]
+    search_fields = ["sku", "proveedor", "referencia", "comentarios"]
+    ordering_fields = ["fecha", "cantidad"]
+    ordering = ["-fecha"]

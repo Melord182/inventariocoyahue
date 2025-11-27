@@ -32,6 +32,31 @@ function cargarTopbar() {
   if (!topbar) return;
 
   const usuarioLog = localStorage.getItem("userLogin") || "Usuario";
+  const currentPath = window.location.pathname;
+
+  // Botones extras sólo en productos (listar, agregar, editar)
+  let accionesProductos = "";
+  const esMarcaoModelo =
+    currentPath.includes("/paginas/marcas/listar.html") ||
+    currentPath.includes("/paginas/modelos/");
+  const esPaginaProductos =
+    currentPath.includes("/paginas/productos/") &&
+    (currentPath.endsWith("listar.html") ||
+      currentPath.endsWith("agregar.html") ||
+      currentPath.endsWith("editar.html"));
+
+  if (esPaginaProductos && !esMarcaoModelo) {
+    accionesProductos = `
+      <div class="d-none d-md-flex align-items-center gap-2 me-3">
+        <a href="/paginas/marcas/listar.html" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-tags"></i> Gestionar marcas
+        </a>
+        <a href="/paginas/modelos/listar.html" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-cpu"></i> Gestionar modelos
+        </a>
+      </div>
+    `;
+  }
 
   topbar.innerHTML = `
     <div class="d-flex align-items-center gap-2">
@@ -40,12 +65,7 @@ function cargarTopbar() {
       </button>
     </div>
 
-    <div class="flex-grow-1 d-none d-md-flex justify-content-center">
-      <div class="search-bar" style="max-width:420px; width:100%;">
-        <input type="text" class="form-control form-control-sm search-input"
-               placeholder="Buscar activo o serial">
-      </div>
-    </div>
+    ${accionesProductos}
 
     <div class="d-flex align-items-center gap-3">
 

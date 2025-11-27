@@ -161,6 +161,20 @@ function renderCategorias(lista) {
       </div>
     `;
 
+    const innerCard = card.querySelector(".category-card");
+
+    // 👉 Hacer clic en el card lleva a productos filtrados
+    innerCard.addEventListener("click", (event) => {
+      // Si el click fue en un botón o link, NO redirigimos
+      if (event.target.closest("a, button")) return;
+
+      const url = `/paginas/productos/listar.html?categoria_id=${encodeURIComponent(
+        cat.id
+      )}&categoria=${encodeURIComponent(nombre)}`;
+
+      window.location.href = url;
+    });
+
     contenedor.appendChild(card);
   });
 }

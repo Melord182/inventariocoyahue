@@ -201,6 +201,48 @@ class Mantenciones(models.Model):
     def __str__(self):
         return f"Mantención {self.producto.nro_serie} - {self.fecha}"
 
+class Movimientos(models.Model):
+    """
+    Movimientos de stock (entradas, salidas, ajustes).
+    No modifican directamente el producto, pero dejan un registro histórico.
+    """
+
+    TIPO_CHOICES = [
+        ("entrada", "Entrada"),
+        ("salida", "Salida"),
+        ("ajuste", "Ajuste"),
+    ]
+
+    fecha = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+
+    # SKU / número de serie del producto (texto libre)
+    sku = models.CharField(max_length=100)
+
+    # Cantidad involucrada en el movimiento
+    cantidad = models.PositiveIntegerField(default=1)
+
+    # Datos adicionales libres (texto)
+    proveedor = models.CharField(max_length=200, blank=True)
+    referencia = models.CharField(max_length=200, blank=True)
+    comentarios = models.TextField(blank=True)
+
+    # Usuario que realizó el movimiento (opcional)
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos",
+    )
+
+    class Meta:
+        verbose_name = "Movimiento"
+        verbose_name_plural = "Movimientos"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.sku} x{self.cantidad} ({self.fecha.strftime('%d/%m/%Y %H:%M')})"
 
 class HistorialEstados(models.Model):
     """Historial de cambios de estado de los productos"""
@@ -314,8 +356,8 @@ class CodigoQR(models.Model):
     imagen_qr = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
     
     def generar_qr(self):
-        relative_url = reverse('producto_detail', kwargs={'pk': self.producto.id})
-        base = settings.BASE_URL.rstrip('/')
+        relative_url = "paginas/producto/detalle.html?id=" + str(self.producto.id)
+        base = "localhost:5500/"
         full_url = f"{base}{relative_url}"
 
         print("URL GENERADA:", full_url)
