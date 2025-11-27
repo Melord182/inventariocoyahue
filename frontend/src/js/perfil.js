@@ -9,8 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const nombre = document.getElementById("nombre").value.trim();
       const email = document.getElementById("email").value.trim();
-      const telefono = document.getElementById("telefono").value.trim();
-      const cargo = document.getElementById("cargo").value.trim();
+
 
       if (!nombre || !email) {
         mostrarMensaje("Por favor completa los campos requeridos.", "danger");

@@ -96,6 +96,7 @@ function cargarSidebar() {
   <a class="nav-link" href="/paginas/reportes/listar.html"><i class="bi bi-graph-up"></i> Reportes</a>
   <a class="nav-link" href="/paginas/notificaciones/listar.html"><i class="bi bi-bell-fill"></i> Notificaciones</a>
   <a class="nav-link" href="/paginas/ajustes/ajustes.html"><i class="bi bi-gear"></i> Ajustes</a>
+  <a class="nav-link" href="/paginas/usuarios/listar.html"><i class="bi bi-people-fill"></i> Usuarios</a>
 </nav>
 `;
 }

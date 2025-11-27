@@ -37,7 +37,7 @@ function clearTokens() {
 function forceLogout() {
   clearTokens();
   // Ruta real de tu login
-  window.location.href = "/login.html";
+  window.location.href = "/paginas/login/login.html";
 }
 
 // -------------------- Refresh de token -------------------- //

@@ -271,7 +271,7 @@ function requireAdmin() {
   const access = localStorage.getItem("access");
   if (!access) {
     // No hay sesión -> al login
-    window.location.href = "/login.html";
+    window.location.href = "/paginas/login/login.html";
     return false;
   }
 

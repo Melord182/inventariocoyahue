@@ -14,49 +14,42 @@ let dataTable = null;
 let grafico = null;
 
 // ----------------------------
-// Helpers
+// Helpers generales
 // ----------------------------
 
-function normalizarLista(res) {
-  if (Array.isArray(res)) return res;
-  if (res && Array.isArray(res.results)) return res.results;
-  return [];
+function getText(obj, key, fallback = "") {
+  if (!obj || typeof obj !== "object") return fallback;
+  const v = obj[key];
+  if (v === undefined || v === null) return fallback;
+  return String(v);
 }
 
-function getParam(name) {
-  return new URLSearchParams(window.location.search).get(name);
+function normalizarProveedor(p) {
+  if (!p || typeof p !== "object") return {};
+
+  return {
+    id: p.id,
+    nombre: p.nombre || p.nombre_fantasia || "",
+    nombre_legal: p.nombre_legal || p.razon_social || "",
+    rut: p.rut || p.rut_empresa || "",
+    telefono: p.telefono || p.fono || "",
+    email: p.email || p.correo || p.correo_electronico || "",
+    ubicacion: p.ubicacion || p.direccion || "",
+    contacto: p.contacto || p.nombre_contacto || "",
+  };
 }
 
-function getText(o, key, fallback = "—") {
-  if (!o) return fallback;
-  if (o[key] === null || o[key] === undefined || o[key] === "") return fallback;
-  return o[key];
+function normalizarLista(lista) {
+  if (!Array.isArray(lista)) return [];
+  return lista.map(normalizarProveedor);
 }
 
 function alertSuccess(msg) {
-  if (window.Swal) {
-    Swal.fire({
-      icon: "success",
-      title: "Éxito",
-      text: msg,
-      timer: 1400,
-      showConfirmButton: false,
-    });
-  } else {
-    alert(msg);
-  }
+  alert(msg); // luego lo puedes reemplazar por un toast bonito
 }
 
 function alertError(msg) {
-  if (window.Swal) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: msg,
-    });
-  } else {
-    alert(msg);
-  }
+  alert(msg);
 }
 
 // ----------------------------
@@ -124,17 +117,18 @@ function renderTabla(lista) {
   const tbody = document.getElementById("tbodyProveedores");
   if (!tbody) return;
 
+  // Si ya hay DataTable, destruirlo antes de volver a armar la tabla
   if (dataTable) {
     dataTable.destroy();
     dataTable = null;
   }
 
+  // Limpiar filas
   tbody.innerHTML = "";
 
-  if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No hay proveedores</td></tr>`;
-  } else {
-    lista.forEach(p => {
+  // Si hay datos, agregamos filas normales (sin colspan)
+  if (lista.length) {
+    lista.forEach((p) => {
       const nombre = getText(p, "nombre", "Sin nombre");
       const telefono = getText(p, "telefono", "");
       const email = getText(p, "email", "");
@@ -170,10 +164,12 @@ function renderTabla(lista) {
       },
       language: {
         url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json",
+        emptyTable: "No hay proveedores",
       },
     });
   }
 }
+
 
 // Filtros
 function configurarFiltrosLista() {
@@ -238,7 +234,9 @@ function renderGrafico(lista) {
   const labels = Object.keys(iniciales);
   const values = Object.values(iniciales);
 
-  if (grafico) grafico.destroy();
+  if (grafico) {
+    grafico.destroy();
+  }
 
   grafico = new Chart(canvas, {
     type: "bar",
@@ -262,6 +260,7 @@ function renderGrafico(lista) {
 // ============================================================
 // AGREGAR (agregar.html)
 // ============================================================
+
 function initAgregarProveedor() {
   const form = document.getElementById("formAgregarProveedor");
   if (!form) return;
@@ -278,11 +277,12 @@ function initAgregarProveedor() {
     const contactoInput =
       document.getElementById("contacto") ||
       document.getElementById("nombreContacto") ||
-      document.getElementById("contacto_proveedor");
+      document.getElementById("contacto_nombre");
 
     const telefonoInput =
       document.getElementById("telefono") ||
-      document.getElementById("telefonoProveedor");
+      document.getElementById("fono") ||
+      document.getElementById("telefono_contacto");
 
     const correoInput =
       document.getElementById("correo") ||
@@ -293,20 +293,19 @@ function initAgregarProveedor() {
     const telefono = (telefonoInput?.value || "").trim();
     const correo = (correoInput?.value || "").trim();
 
-    // 🔹 SOLO obligamos nombre y rut en el front
-    if (!nombre || !rut) {
-      alert("Nombre y RUT son obligatorios.");
+    if (!nombre) {
+      alertError("El nombre es obligatorio.");
       return;
     }
 
     const payload = {
       nombre,
       rut,
-      nombre_legal: nombreLegal || "",
-      ubicacion: ubicacion || "",
-      contacto: contacto || "",
-      telefono: telefono || "",
-      correo: correo || "",
+      nombre_legal: nombreLegal,
+      ubicacion,
+      contacto,
+      telefono,
+      correo,
     };
 
     try {
@@ -323,12 +322,79 @@ function initAgregarProveedor() {
 // ============================================================
 // EDITAR (editar.html)
 // ============================================================
-// Cargar datos del proveedor en el formulario de edición
-async function cargarProveedorEdicion(id) {
-  try {
-    const p = await API.get(`proveedores/${id}/`);
 
-    const inputId = document.getElementById("idProveedor");
+function initEditarProveedor() {
+  const form = document.getElementById("formEditarProveedor");
+  if (!form) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  if (!id) {
+    alertError("No se recibió ID de proveedor.");
+    return;
+  }
+
+  cargarProveedorEnFormulario(id);
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const nombre = (document.getElementById("nombre")?.value || "").trim();
+    const rut = (document.getElementById("rut")?.value || "").trim();
+    const nombreLegal = (document.getElementById("nombre_legal")?.value || "").trim();
+    const ubicacion = (document.getElementById("ubicacion")?.value || "").trim();
+
+    const contactoInput =
+      document.getElementById("contacto") ||
+      document.getElementById("nombreContacto") ||
+      document.getElementById("contacto_nombre");
+
+    const telefonoInput =
+      document.getElementById("telefono") ||
+      document.getElementById("fono") ||
+      document.getElementById("telefono_contacto");
+
+    const correoInput =
+      document.getElementById("correo") ||
+      document.getElementById("email") ||
+      document.getElementById("correo_electronico");
+
+    const contacto = (contactoInput?.value || "").trim();
+    const telefono = (telefonoInput?.value || "").trim();
+    const correo = (correoInput?.value || "").trim();
+
+    if (!nombre) {
+      alertError("El nombre es obligatorio.");
+      return;
+    }
+
+    const payload = {
+      nombre,
+      rut,
+      nombre_legal: nombreLegal,
+      ubicacion,
+      contacto,
+      telefono,
+      correo,
+    };
+
+    try {
+      await API.put(`proveedores/${id}/`, payload);
+      alertSuccess("Proveedor actualizado correctamente.");
+      window.location.href = "listar.html";
+    } catch (err) {
+      console.error("Error al actualizar proveedor:", err);
+      alertError("No se pudo actualizar el proveedor. " + (err.message || ""));
+    }
+  });
+}
+
+async function cargarProveedorEnFormulario(id) {
+  try {
+    const pRaw = await API.get(`proveedores/${id}/`);
+    const p = normalizarProveedor(pRaw);
+
+    const inputId = document.getElementById("proveedorId");
     const nombre = document.getElementById("nombre");
     const rut = document.getElementById("rut");
     const nombreLegal = document.getElementById("nombre_legal");
@@ -337,11 +403,12 @@ async function cargarProveedorEdicion(id) {
     const contactoInput =
       document.getElementById("contacto") ||
       document.getElementById("nombreContacto") ||
-      document.getElementById("contacto_proveedor");
+      document.getElementById("contacto_nombre");
 
     const telefonoInput =
       document.getElementById("telefono") ||
-      document.getElementById("telefonoProveedor");
+      document.getElementById("fono") ||
+      document.getElementById("telefono_contacto");
 
     const correoInput =
       document.getElementById("correo") ||
@@ -359,73 +426,8 @@ async function cargarProveedorEdicion(id) {
     if (correoInput) correoInput.value = p.correo || "";
   } catch (err) {
     console.error("Error al cargar proveedor para editar:", err);
-    alertError("No se pudo cargar el proveedor.");
+    alertError("No se pudo cargar el proveedor para editar.");
   }
-}
-
-function initEditarProveedor() {
-  const form = document.getElementById("formEditarProveedor");
-  if (!form) return;
-
-  const id = getParam("id");
-  if (!id) {
-    alert("Falta el ID del proveedor.");
-    window.location.href = "listar.html";
-    return;
-  }
-
-  cargarProveedorEdicion(id);
-
-  form.addEventListener("submit", async e => {
-    e.preventDefault();
-
-    const nombre = (document.getElementById("nombre")?.value || "").trim();
-    const rut = (document.getElementById("rut")?.value || "").trim();
-    const nombreLegal = (document.getElementById("nombre_legal")?.value || "").trim();
-    const ubicacion = (document.getElementById("ubicacion")?.value || "").trim();
-
-    const contactoInput =
-      document.getElementById("contacto") ||
-      document.getElementById("nombreContacto") ||
-      document.getElementById("contacto_proveedor");
-
-    const telefonoInput =
-      document.getElementById("telefono") ||
-      document.getElementById("telefonoProveedor");
-
-    const correoInput =
-      document.getElementById("correo") ||
-      document.getElementById("email") ||
-      document.getElementById("correo_electronico");
-
-    const contacto = (contactoInput?.value || "").trim();
-    const telefono = (telefonoInput?.value || "").trim();
-    const correo = (correoInput?.value || "").trim();
-
-    if (!nombre || !rut) {
-      alert("Nombre y RUT son obligatorios.");
-      return;
-    }
-
-    const payload = {
-      nombre,
-      rut,
-      nombre_legal: nombreLegal || "",
-      ubicacion: ubicacion || "",
-      contacto: contacto || "",
-      telefono: telefono || "",
-      correo: correo || "",
-    };
-
-    try {
-      await API.put(`proveedores/${id}/`, payload);
-      alertSuccess("Proveedor actualizado correctamente.");
-      window.location.href = "listar.html";
-    } catch (err) {
-      console.error("Error al actualizar proveedor:", err);
-      alertError("No se pudo actualizar el proveedor. " + (err.message || ""));
-    }
-  });
 }
 
 // ============================================================
@@ -434,50 +436,27 @@ function initEditarProveedor() {
 
 function initEliminarProveedor() {
   const form = document.getElementById("formEliminarProveedor");
-  const infoDiv = document.getElementById("proveedor-info");
-  if (!form || !infoDiv) return;
+  if (!form) return;
 
-  const id = getParam("id");
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
   if (!id) {
-    alert("Falta el ID del proveedor.");
-    window.location.href = "listar.html";
+    alertError("No se recibió ID de proveedor.");
     return;
   }
 
-  // Mostrar datos
-  API.get(`proveedores/${id}/`)
-    .then(p => {
-      const nombre = getText(p, "nombre", "Sin nombre");
-      const rut = getText(p, "rut", "—");
-      const ubicacion = getText(p, "ubicacion", "—");
-
-      infoDiv.innerHTML = `
-        <div class="bg-light p-3 rounded border">
-          <p class="mb-1"><strong>${nombre}</strong></p>
-          <p class="mb-1">RUT: ${rut}</p>
-          <p class="mb-0">Ubicación: ${ubicacion}</p>
-        </div>
-      `;
-
-      const hiddenId = document.getElementById("idProveedor");
-      if (hiddenId) hiddenId.value = p.id;
-    })
-    .catch(err => {
-      console.error("Error al cargar proveedor:", err);
-      infoDiv.textContent = "No se pudo cargar el proveedor.";
-    });
+  const spanId = document.getElementById("proveedorIdEliminar");
+  if (spanId) spanId.innerText = id;
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
-    if (!confirm("¿Seguro que deseas eliminar este proveedor?")) return;
-
     try {
       await API.delete(`proveedores/${id}/`);
       alertSuccess("Proveedor eliminado correctamente.");
       window.location.href = "listar.html";
     } catch (err) {
       console.error("Error al eliminar proveedor:", err);
-      alertError("No se pudo eliminar el proveedor.");
+      alertError("No se pudo eliminar el proveedor. " + (err.message || ""));
     }
   });
 }
@@ -487,10 +466,13 @@ function initEliminarProveedor() {
 // ============================================================
 
 function initDetalleProveedor() {
-  const id = getParam("id");
+  const contenedor = document.getElementById("proveedor-detalle-info");
+  if (!contenedor) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
   if (!id) {
-    alert("Falta el ID del proveedor.");
-    window.location.href = "listar.html";
+    contenedor.innerHTML = `<p class="text-danger">No se recibió ID de proveedor.</p>`;
     return;
   }
 
@@ -499,42 +481,41 @@ function initDetalleProveedor() {
 
 async function cargarDetalleProveedor(id) {
   const dl = document.getElementById("proveedor-detalle-info");
-  const btnEditar = document.getElementById("btn-editar-proveedor");
   if (!dl) return;
 
-  try {
-    const p = await API.get(`proveedores/${id}/`);
+  dl.innerHTML = `<p>Cargando...</p>`;
 
-    const nombre = getText(p, "nombre", "Sin nombre");
-    const rut = getText(p, "rut", "—");
-    const nombreLegal = getText(p, "nombre_legal", "—");
-    const ubicacion = getText(p, "ubicacion", "—");
-    const telefono = getText(p, "telefono", "—");
-    const email = getText(p, "email", "—");
+  try {
+    const pRaw = await API.get(`proveedores/${id}/`);
+    const p = normalizarProveedor(pRaw);
 
     dl.innerHTML = `
-      <dt class="col-sm-4">ID Proveedor</dt>
+      <dt class="col-sm-4">ID</dt>
       <dd class="col-sm-8">${p.id}</dd>
 
       <dt class="col-sm-4">Nombre</dt>
-      <dd class="col-sm-8">${nombre}</dd>
-
-      <dt class="col-sm-4">RUT Empresa</dt>
-      <dd class="col-sm-8">${rut}</dd>
+      <dd class="col-sm-8">${p.nombre}</dd>
 
       <dt class="col-sm-4">Nombre Legal</dt>
-      <dd class="col-sm-8">${nombreLegal}</dd>
+      <dd class="col-sm-8">${p.nombre_legal}</dd>
+
+      <dt class="col-sm-4">RUT</dt>
+      <dd class="col-sm-8">${p.rut}</dd>
 
       <dt class="col-sm-4">Ubicación</dt>
-      <dd class="col-sm-8">${ubicacion}</dd>
+      <dd class="col-sm-8">${p.ubicacion}</dd>
+
+      <dt class="col-sm-4">Contacto</dt>
+      <dd class="col-sm-8">${p.contacto}</dd>
 
       <dt class="col-sm-4">Teléfono</dt>
-      <dd class="col-sm-8">${telefono}</dd>
+      <dd class="col-sm-8">${p.telefono}</dd>
 
       <dt class="col-sm-4">Email</dt>
-      <dd class="col-sm-8">${email}</dd>
+      <dd class="col-sm-8">${p.email}</dd>
     `;
 
+    const btnEditar = document.getElementById("btnEditarProveedor");
     if (btnEditar) {
       btnEditar.href = `editar.html?id=${p.id}`;
     }
